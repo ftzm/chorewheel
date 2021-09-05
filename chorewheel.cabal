@@ -1,0 +1,80 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.32.0.
+--
+-- see: https://github.com/sol/hpack
+--
+-- hash: 3915c6f5f50b0ae58abbf1ddc1bdc929e31542ada0890bd209c662ce517a3c22
+
+name:           chorewheel
+version:        0.1.0.0
+description:    Please see the README on GitHub at <https://github.com/ftzm/readme.org#readme>
+homepage:       https://github.com/ftzm/chorewheel#readme
+bug-reports:    https://github.com/ftzm/chorewheel/issues
+author:         Author name here
+maintainer:     example@example.com
+copyright:      2018 Author name here
+license:        BSD3
+build-type:     Simple
+
+source-repository head
+  type: git
+  location: https://github.com/ftzm/chorewheel
+
+library
+  exposed-modules:
+      API
+      ChoreWheel
+      DB
+      Log
+      Models
+  other-modules:
+      Paths_chorewheel
+  hs-source-dirs:
+      src
+  ghc-options: -Wall -Werror -Wno-unused-do-bind
+  build-depends:
+      aeson
+    , base >=4.7 && <5
+    , bytestring
+    , envparse
+    , esqueleto
+    , monad-control
+    , monad-logger
+    , mtl
+    , persistent
+    , persistent-postgresql
+    , persistent-template
+    , resource-pool
+    , servant
+    , servant-server
+    , text
+    , warp
+  default-language: Haskell2010
+
+executable chorewheel
+  main-is: Main.hs
+  other-modules:
+      Paths_chorewheel
+  hs-source-dirs:
+      app
+  ghc-options: -Wall -Werror -Wno-unused-do-bind -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      aeson
+    , base >=4.7 && <5
+    , bytestring
+    , chorewheel
+    , envparse
+    , esqueleto
+    , monad-control
+    , monad-logger
+    , mtl
+    , persistent
+    , persistent-postgresql
+    , persistent-template
+    , resource-pool
+    , servant
+    , servant-server
+    , text
+    , warp
+  default-language: Haskell2010
