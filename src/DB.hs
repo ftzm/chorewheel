@@ -1,3 +1,6 @@
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ExistentialQuantification  #-}
@@ -14,6 +17,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
+
 module DB where
 
 import Env
@@ -29,6 +33,9 @@ import           Database.Persist.TH  (mkMigrate, mkPersist, persistLowerCase,
                                        share, sqlSettings)
 import           Database.Persist.Sql (SqlPersistT, runMigration, runSqlPool)
 import Control.Monad.Logger (runStdoutLoggingT)
+import System.Exit (die)
+import GHC.Generics
+import Data.Generics.Product.Typed
 
 import Models
 
@@ -58,10 +65,9 @@ rightToMaybe e = case e of
   Right x -> Just x
   Left _ -> Nothing
 
-parsePostgresConfig :: IO (Maybe PostgresConfig)
-parsePostgresConfig = rightToMaybe <$> result
-  where result =
-          Env.parseOr putStrLn (header "envparse example") $ PostgresConfig
+parsePostgresConfig :: IO (Either String PostgresConfig)
+parsePostgresConfig =
+          Env.parseOr pure (header "Postgresql Environment") $ PostgresConfig
           <$> var (str <=< nonempty) "POSTGRES_USER"      (help "User")
           <*> var (str <=< nonempty) "POSTGRES_PASSWORD"  (help "Password")
 
@@ -78,12 +84,12 @@ makeConnStr PostgresConfig {..} =
 doMigrations :: SqlPersistT IO ()
 doMigrations = runMigration migrateAll
 
-makePool :: IO (Maybe ConnectionPool)
+makePool :: IO ConnectionPool
 makePool = do
   config  <- parsePostgresConfig
   case config of
-    Nothing -> pure Nothing
-    Just c  -> Just <$> do
+    Left e -> die $ "Error creating Postgresql Connection Pool: " <> e
+    Right c  -> do
       pool <- (runStdoutLoggingT $ createPostgresqlPool (makeConnStr c) 1)
       runSqlPool doMigrations pool
       return pool
@@ -122,3 +128,51 @@ instance MonadIO m => SetUser (PersistentDbT m) where
 
 runPUT :: MonadIO m => ConnectionPool -> PersistentDbT m a -> m a
 runPUT pool (PersistentDbT m) = runReaderT m pool
+
+--------------------------------------------------------------------------------
+-- Testing new shit
+
+type WithGetUsers r m = (MonadReader r m, HasType ConnectionPool r, MonadIO m)
+
+-- define interface typeclass
+class Monad m => MonadGetUsers m where
+  getUsers' :: m [User]
+
+-- write polymorphic implementation
+getUsersImpl :: WithGetUsers r m => m [User]
+getUsersImpl = do
+    pool <- asks $ getTyped @ConnectionPool
+    users <- liftIO $ runSqlPool (selectList [] []) pool
+    return $ map (toUser . entityVal) users
+
+-- create a newtype to "carry" a typeclass instance, which can later be used to
+-- provide instances to other Monad stacks via "derivingVia"
+newtype GetUsersT m a = GetUsersT (m a)
+  deriving newtype (Functor, Applicative, Monad, MonadIO, MonadReader r)
+
+-- write an instance on the above carrier type, which is just the Impl function
+-- Might be better to write the implementation directly in here
+instance WithGetUsers r m => MonadGetUsers (GetUsersT m) where
+  getUsers' = getUsersImpl
+
+-- Append holding connection pool
+-- We derive generic so that we can use `HasType` on it
+data AppEnv = AppEnv {
+  conectionPool :: ConnectionPool
+  } deriving Generic
+
+-- Create a concrete App monad stack and derive MonadGetUsers instance for it
+-- using "GetUsersT"
+newtype App' a = App' (ReaderT AppEnv IO a)
+  deriving newtype (Functor, Applicative, Monad, MonadIO, MonadReader AppEnv)
+  deriving MonadGetUsers via (GetUsersT App')
+
+testApp :: App' [User]
+testApp = do
+  getUsers'
+
+polyBoye :: MonadGetUsers m => m [User]
+polyBoye = getUsers'
+
+testApp' :: App' [User]
+testApp' = polyBoye

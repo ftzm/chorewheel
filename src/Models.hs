@@ -7,6 +7,8 @@ module Models where
 
 import GHC.Generics
 
+import Servant.Auth.Server
+
 import Data.Aeson
 import Data.Text (Text)
 import Control.Monad.Trans
@@ -18,6 +20,8 @@ data User = User
 
 instance ToJSON User -- generated via Generic
 instance FromJSON User -- generated via Generic
+instance ToJWT User
+instance FromJWT User
 
 class Monad m => GetUsers m where
   getUsers :: m [User]

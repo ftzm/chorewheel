@@ -22,6 +22,7 @@ description:         Please see the README on GitHub at <https://github.com/ftzm
 dependencies:
 - base >= 4.7 && < 5
 - bytestring
+- base64-bytestring
 - envparse
 - persistent
 - persistent-postgresql
@@ -32,10 +33,15 @@ dependencies:
 - esqueleto
 - servant
 - servant-server
+- servant-auth-server
 - text
 - aeson
 - warp
 - mtl
+- generic-lens
+- cryptonite
+- cookie
+- time
 
 ghc-options:
   - -Wall

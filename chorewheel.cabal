@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 3915c6f5f50b0ae58abbf1ddc1bdc929e31542ada0890bd209c662ce517a3c22
+-- hash: 2aa34e412243369fa6e63a0466deec559a19a09d82d252ffbe22f6eb32d71c31
 
 name:           chorewheel
 version:        0.1.0.0
@@ -24,6 +24,7 @@ source-repository head
 library
   exposed-modules:
       API
+      Auth
       ChoreWheel
       DB
       Log
@@ -36,9 +37,13 @@ library
   build-depends:
       aeson
     , base >=4.7 && <5
+    , base64-bytestring
     , bytestring
+    , cookie
+    , cryptonite
     , envparse
     , esqueleto
+    , generic-lens
     , monad-control
     , monad-logger
     , mtl
@@ -47,8 +52,10 @@ library
     , persistent-template
     , resource-pool
     , servant
+    , servant-auth-server
     , servant-server
     , text
+    , time
     , warp
   default-language: Haskell2010
 
@@ -62,10 +69,14 @@ executable chorewheel
   build-depends:
       aeson
     , base >=4.7 && <5
+    , base64-bytestring
     , bytestring
     , chorewheel
+    , cookie
+    , cryptonite
     , envparse
     , esqueleto
+    , generic-lens
     , monad-control
     , monad-logger
     , mtl
@@ -74,7 +85,9 @@ executable chorewheel
     , persistent-template
     , resource-pool
     , servant
+    , servant-auth-server
     , servant-server
     , text
+    , time
     , warp
   default-language: Haskell2010
