@@ -1,3 +1,4 @@
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
@@ -16,16 +17,14 @@
 {-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 
 module DB where
 
 import Env
 import Control.Monad.Reader
-import           Database.Persist.Postgresql          (ConnectionPool,
-                                                       ConnectionString,
-                                                       createPostgresqlPool, fromSqlKey)
-import           Database.Persist.Postgresql          (selectList, insert, entityVal)
+import           Database.Persist.Postgresql
 import qualified Data.ByteString.Char8                as BS
 import Data.List (intercalate)
 import Data.Text (Text, pack)
@@ -36,8 +35,15 @@ import Control.Monad.Logger (runStdoutLoggingT)
 import System.Exit (die)
 import GHC.Generics
 import Data.Generics.Product.Typed
+import Data.Time.Clock
+import Data.Text.Encoding
+import Data.ByteString.Base64 (decodeLenient)
+import Data.Bifunctor
+import Crypto.KDF.BCrypt (validatePassword)
+
 
 import Models
+import Auth
 
 -------------------------------------------------------------------------------
 -- Create DB tables
@@ -46,10 +52,25 @@ share
     [ mkPersist sqlSettings
     , mkMigrate "migrateAll"
     ] [persistLowerCase|
-DbUser sql=users
+DbUser sql=user
     name Text
     email Text
+    UniqueName name
+    UniqueEmail email
     deriving Show Eq
+
+DbRefreshToken sql=refresh_token
+    tokenString Text
+    userId DbUserId
+    expiry UTCTime
+    RefreshTokenUniqueUserId userId
+    UniqueTokenString tokenString
+    deriving Show Eq
+
+DbUserPassword sql=user_password
+    passwordHash Text
+    userId DbUserId
+    UserPasswordUniqueUserId userId
 |]
 
 -------------------------------------------------------------------------------
@@ -94,6 +115,99 @@ makePool = do
       runSqlPool doMigrations pool
       return pool
 
+
+-------------------------------------------------------------------------------
+-- Refresh Token
+
+type WithDb r m = (MonadReader r m, HasType ConnectionPool r, MonadIO m)
+
+-- TODO: refactor to use plain IO impls and get pool in instance def
+
+-- write polymorphic implementation
+-- TODO: put everything in one runSqlPool to put it in one transaction
+-- TODO: check expiry
+redeemRefreshTokenImpl :: WithDb r m => BS.ByteString -> m (Maybe (BS.ByteString, Key DbUser))
+redeemRefreshTokenImpl token = do
+    pool <- asks $ getTyped @ConnectionPool
+    dbToken <- liftIO $ runSqlPool (getBy $ UniqueTokenString $ decodeUtf8 token) pool
+    case dbToken of
+      Nothing -> return Nothing
+      Just Entity{..} -> do
+        _ <- liftIO $ runSqlPool (delete $ entityKey) pool
+        newToken <- liftIO genToken
+        newExpiry <- addUTCTime (fromInteger 3000) <$> liftIO getCurrentTime
+        let userId = dbRefreshTokenUserId entityVal
+        _ <- liftIO $ runSqlPool (insert $ DbRefreshToken (decodeUtf8 newToken) userId newExpiry) pool
+        return $ Just (newToken, userId)
+
+-- write polymorphic implementation
+createRefreshTokenImpl :: WithDb r m => Key DbUser -> m BS.ByteString
+createRefreshTokenImpl userId = do
+    pool <- asks $ getTyped @ConnectionPool
+    _ <- liftIO $ runSqlPool (deleteBy $ RefreshTokenUniqueUserId userId) pool
+    newToken <- liftIO genToken
+    newExpiry <- addUTCTime (fromInteger 3000) <$> liftIO getCurrentTime
+    _ <- liftIO $ runSqlPool (insert $ DbRefreshToken (decodeUtf8 newToken) userId newExpiry) pool
+    return newToken
+
+-- write polymorphic implementation
+createRefreshTokenImpl' :: ConnectionPool -> Key DbUser -> IO BS.ByteString
+createRefreshTokenImpl' pool userId = do
+    _ <- liftIO $ runSqlPool (deleteBy $ RefreshTokenUniqueUserId userId) pool
+    newToken <- liftIO genToken
+    newExpiry <- addUTCTime (fromInteger 3000) <$> liftIO getCurrentTime
+    _ <- liftIO $ runSqlPool (insert $ DbRefreshToken (decodeUtf8 newToken) userId newExpiry) pool
+    return newToken
+
+-- TODO: Don't use db type for user id
+
+-- define interface typeclass
+class Monad m => RefreshToken m where
+  redeemRefreshToken :: BS.ByteString -> m (Maybe (BS.ByteString, Key DbUser))
+  createRefreshToken :: Key DbUser -> m BS.ByteString
+
+-- create a newtype to "carry" a typeclass instance, which can later be used to
+-- provide instances to other Monad stacks via "derivingVia"
+newtype RefreshTokenT m a = RefreshTokenT (m a)
+  deriving newtype (Functor, Applicative, Monad, MonadIO, MonadReader r)
+
+-- write an instance on the above carrier type (which is just the Impl func)
+-- Might be better to write the implementation directly in here
+instance WithDb r m => RefreshToken (RefreshTokenT m) where
+  redeemRefreshToken = redeemRefreshTokenImpl
+  createRefreshToken = createRefreshTokenImpl
+
+-------------------------------------------------------------------------------
+-- getPasswordHash
+
+getPasswordHashImpl :: WithDb r m => Text -> m (Maybe ((Key DbUser), Text))
+getPasswordHashImpl name = do
+    pool <- asks $ getTyped @ConnectionPool
+    userO <- liftIO $ runSqlPool (getBy $ UniqueName name) pool
+    password <- case userO of
+      Nothing -> return Nothing
+      Just user -> do
+        password <- liftIO $ runSqlPool (getBy $ UserPasswordUniqueUserId $ entityKey user) pool
+        let pass = dbUserPasswordPasswordHash . entityVal <$> password
+        return $ (entityKey user, ) <$> pass
+    return password
+
+validateBasicAuth :: WithDb r m  => Text -> m (Maybe (Key DbUser))
+validateBasicAuth encodedInput = do
+  let asBs :: BS.ByteString = encodeUtf8 encodedInput
+  let decoded :: BS.ByteString = decodeLenient asBs
+  let (user', password') = second (BS.drop 1) . BS.break (== ':') $ decoded
+  liftIO $ print (user', password')
+  passwordO <- getPasswordHashImpl $ decodeUtf8 user'
+  case passwordO of
+    Nothing -> liftIO $ putStrLn "No password" *> return Nothing
+    Just (userId, password) -> case validatePassword password' $ encodeUtf8 password of
+      False -> liftIO $ putStrLn "Invalid password" *> return Nothing
+      True -> do
+        return $ Just $ userId
+
+
+
 -------------------------------------------------------------------------------
 -- Persistent-based Typeclass Instances
 
@@ -137,6 +251,7 @@ type WithGetUsers r m = (MonadReader r m, HasType ConnectionPool r, MonadIO m)
 -- define interface typeclass
 class Monad m => MonadGetUsers m where
   getUsers' :: m [User]
+  getUser :: Int -> m (Maybe User)
 
 -- write polymorphic implementation
 getUsersImpl :: WithGetUsers r m => m [User]
@@ -144,6 +259,14 @@ getUsersImpl = do
     pool <- asks $ getTyped @ConnectionPool
     users <- liftIO $ runSqlPool (selectList [] []) pool
     return $ map (toUser . entityVal) users
+
+-- write polymorphic implementation
+getUserImpl :: WithGetUsers r m => Int -> m (Maybe User)
+getUserImpl userId = do
+    pool <- asks $ getTyped @ConnectionPool
+    let userId' :: Key DbUser = toSqlKey $ fromIntegral userId
+    user <- liftIO $ runSqlPool (get $ userId') pool
+    return $ toUser <$> user
 
 -- create a newtype to "carry" a typeclass instance, which can later be used to
 -- provide instances to other Monad stacks via "derivingVia"
@@ -154,6 +277,7 @@ newtype GetUsersT m a = GetUsersT (m a)
 -- Might be better to write the implementation directly in here
 instance WithGetUsers r m => MonadGetUsers (GetUsersT m) where
   getUsers' = getUsersImpl
+  getUser = getUserImpl
 
 -- Append holding connection pool
 -- We derive generic so that we can use `HasType` on it

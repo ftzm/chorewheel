@@ -42,6 +42,9 @@ dependencies:
 - cryptonite
 - cookie
 - time
+- exceptions
+- word8
+- memory
 
 ghc-options:
   - -Wall

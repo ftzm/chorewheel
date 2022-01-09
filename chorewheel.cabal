@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 2aa34e412243369fa6e63a0466deec559a19a09d82d252ffbe22f6eb32d71c31
+-- hash: b59f99cffd67c80c2cf10ed4e1cf5a1e4d4e3d86adaf61ae16a37529284a591b
 
 name:           chorewheel
 version:        0.1.0.0
@@ -43,7 +43,9 @@ library
     , cryptonite
     , envparse
     , esqueleto
+    , exceptions
     , generic-lens
+    , memory
     , monad-control
     , monad-logger
     , mtl
@@ -57,6 +59,7 @@ library
     , text
     , time
     , warp
+    , word8
   default-language: Haskell2010
 
 executable chorewheel
@@ -76,7 +79,9 @@ executable chorewheel
     , cryptonite
     , envparse
     , esqueleto
+    , exceptions
     , generic-lens
+    , memory
     , monad-control
     , monad-logger
     , mtl
@@ -90,4 +95,5 @@ executable chorewheel
     , text
     , time
     , warp
+    , word8
   default-language: Haskell2010
