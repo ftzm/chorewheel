@@ -8,9 +8,7 @@ import Network.Wai.Handler.Warp (run)
 import Servant.Server
 import Servant.Auth.Server
 import Control.Monad.Reader
-import           Database.Persist.Postgresql          (ConnectionPool)
 import           Control.Monad.Error.Class
-import Control.Monad.Except
 import           Database.Persist.Postgresql
 import Control.Exception (SomeException(..))
 import Control.Monad.Catch (catch)
@@ -18,12 +16,16 @@ import Data.Maybe
 import qualified Data.ByteString as BS
 import Crypto.KDF.BCrypt (hashPassword)
 import Data.Text.Encoding
+import qualified Hasql.Session as Session
+import System.Exit (die)
+import qualified Hasql.Pool as Pool
 
 
 import DB
 import API
 import Models
 import Log
+import DB.User
 
 theFunc :: ReaderT ConnectionPool IO a -> Handler a
 theFunc = undefined
@@ -39,18 +41,8 @@ runProgram = do
 toHandler' :: MonadError ServerError m => MonadIO m => UserStore m => MonadLog m => m a -> Handler a
 toHandler' = undefined
 
-appToHandler :: ConnectionPool -> App a -> Handler a
-appToHandler pool (App m) = do
-  val <- liftIO $ runExceptT $ runReaderT m $ AppEnv pool
-  case val of
-    Left e -> throwError e
-    Right s -> return s
-
-
-
-runApp :: IO ()
-runApp = do
-  pool <- makePool
+createTestUser :: ConnectionPool -> IO ()
+createTestUser pool = do
   -- NOTE: this is how to catch exceptions from persistent
   hashedPassword :: BS.ByteString <- liftIO $ hashPassword 10 ("test" :: BS.ByteString)
   let dbAction = do
@@ -66,7 +58,28 @@ runApp = do
       Just k'' -> (return k'') :: IO (Key DbUser)
   t <- createRefreshTokenImpl' pool k
   print t
+
+createPool :: IO Pool.Pool
+createPool = do
+  config  <- parsePostgresConfig
+  connStr <- case config of
+    Left e -> die $ "Fuck: Error creating Postgresql Connection Pool: " <> e
+    Right c -> return $ makeConnStr c
+  pool <- Pool.acquire (10, 60, connStr)
+  return pool
+
+runApp :: IO ()
+runApp = do
+  --createdIdE <- Session.run (Session.statement (User "matt" "m@test.com") insertUser) conn
+  --_ <- case createdIdE of
+    --Left _ -> die "user already exists"
+    --Right x -> liftIO $ print x
+  pool <- createPool
+  gotted <- Pool.use pool (Session.statement (UserId 1) selectUser)
+  print gotted
+
   myKey <- generateKey
+  pool' <- makePool
+  createTestUser pool'
   let jwtCfg = defaultJWTSettings myKey
-  --run 8080 $ abstractApp jwtCfg (\m -> runExceptT $ runConsoleLogT $ runPUT pool $ m)
-  run 8080 $ abstractApp jwtCfg $ appToHandler pool
+  run 8080 $ abstractApp jwtCfg $ appToHandler pool'

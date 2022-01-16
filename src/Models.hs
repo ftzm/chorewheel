@@ -11,6 +11,7 @@ import Servant.Auth.Server
 
 import Data.Aeson
 import Data.Text (Text)
+import Data.Int (Int32)
 import Control.Monad.Trans
 
 data User = User
@@ -41,3 +42,7 @@ instance {-# OVERLAPPABLE #-}
   , GetUsers m
   ) => GetUsers (t m) where
   getUsers = lift getUsers
+
+newtype UserId = UserId {unUserId :: Int32} deriving Show
+
+newtype PasswordHash = PasswordHash Text

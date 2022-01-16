@@ -16,7 +16,9 @@ import Prelude hiding (break, drop)
 import GHC.Generics
 import Data.Aeson
 import Servant.API
+import Servant.API.Generic
 import Servant.Server
+import Servant.Server.Generic
 import Servant.Auth.Server
 import Data.Proxy
 import Control.Monad.Trans
@@ -37,45 +39,49 @@ import Models
 import Log
 import DB
 
-
--------------------------------------------------------------------------------
--- test that throwall works at all
-
-type Protected'
-    = "name"  :> Get '[JSON] String
- :<|> "email" :> Get '[JSON] String
-
-protected' :: AuthResult User -> Server Protected'
-protected' (Authenticated u) = return (show $ name u) :<|> return (show $ email u)
-protected' _ = throwAll err401
-
 -------------------------------------------------------------------------------
 
-type JwtAuth = Auth '[JWT] User
 
-type UserAPI
-  = "users" :> Get '[JSON] [User]
-  :<|> "user" :> ReqBody '[JSON] User :> Post '[JSON] (Maybe String)
-  :<|> "ping" :> Get '[PlainText] String
-  :<|> "refresh" :> Get '[PlainText] (Headers '[Header "Set-Cookie" SetCookie] String)
-  :<|> Auth '[JWT] User :> "test" :> Get '[PlainText] String
+data ChorewheelApi route = ChorewheelApi
+  { _userApi :: route
+      :- Auth '[JWT] JwtPayload
+      :> ToServant UserApi AsApi
+  , _ping :: route
+      :- "ping"
+      :> Get '[PlainText] String
+  , _login :: route
+      :- "login"
+      :> Header "Authorization" Text
+      :> Post '[PlainText] (Headers '[Header "Set-Cookie" SetCookie] String)
+  , _refresh :: route
+      :- "refresh"
+      :> Header "Cookie" Text
+      :> Get '[PlainText] (Headers '[Header "Set-Cookie" SetCookie] String)
+  } deriving (Generic)
 
-type SimpleUserAPI
-  = (
-    Auth '[JWT] JwtPayload :> Protected
-    :<|> "ping" :> Get '[PlainText] String
-    :<|> "refresh" :> Header "Cookie" Text :> Get '[PlainText] (Headers '[Header "Set-Cookie" SetCookie] String)
-    :<|> "login" :> Header "Authorization" Text :> Post '[PlainText] (Headers '[Header "Set-Cookie" SetCookie] String)
-    )
+data UserApi route = UserApi
+  { users :: route
+      :- "users"
+      :> Get '[JSON] [User]
+  , me :: route
+      :- "me"
+      :> Get '[JSON] (Maybe User)
+  } deriving (Generic)
 
-type Protected =
-    "users" :> Get '[JSON] [User]
-    :<|> "me" :> Get '[JSON] (Maybe User)
+userApi :: (AuthResult JwtPayload) -> ToServant UserApi (AsServerT App)
+userApi (Authenticated jwt) = genericServerT UserApi
+  { users = return []
+  , me = meHandler jwt
+  }
+userApi _ = throwAll err401
 
-protected :: (AuthResult JwtPayload) -> ServerT Protected App
-protected (Authenticated jwt) = allUsers' :<|> me jwt
---protected _ = throwError err401 :<|> throwError err401
-protected _ = throwAll err401
+appServer' :: JWTSettings -> ChorewheelApi (AsServerT App)
+appServer' jwtCfg = ChorewheelApi
+  { _userApi = \authData -> (userApi authData)
+  , _ping = return "pong"
+  , _login = login jwtCfg
+  , _refresh = refresh jwtCfg
+  }
 
 login :: WithDb r m => MonadError ServerError m => RefreshToken m => MonadIO m => JWTSettings -> Maybe Text -> m (Headers '[Header "Set-Cookie" SetCookie] String)
 login jwtCfg header = do
@@ -90,50 +96,41 @@ login jwtCfg header = do
         Nothing -> throwError err401
         Just userKey -> do
           refreshToken <- createRefreshToken userKey
-          expiration <- addUTCTime (fromInteger 300) <$> liftIO getCurrentTime
-          let userId'' :: Int = fromIntegral $ fromSqlKey userKey
-          jwte <- liftIO $ makeJWT (JwtPayload userId'') jwtCfg $ Just expiration
-          let jwt = case jwte of
-                Left oops -> show oops
-                Right x -> show x
+          jwt <- createJWT jwtCfg userKey
           let cookie = def
                    { setCookieName = "Refresh-Token"
                    , setCookieValue = refreshToken
                    }
           return $ addHeader cookie jwt
 
-me :: MonadGetUsers m => JwtPayload -> m (Maybe User)
-me jwt = getUser $ userId jwt
+meHandler :: MonadGetUsers m => JwtPayload -> m (Maybe User)
+meHandler jwt = getUser $ userId jwt
 
 protect :: MonadError ServerError m => (a -> m b) -> AuthResult a -> m b
 protect r (Authenticated a) = r a
 protect _ _ = throwError err401
-
-protectAnon :: MonadError ServerError m => m b -> AuthResult a -> m b
-protectAnon r (Authenticated _) = r
-protectAnon _ _ = throwError err401
+--
+--protectAnon :: MonadError ServerError m => m b -> AuthResult a -> m b
+--protectAnon r (Authenticated _) = r
+--protectAnon _ _ = throwError err401
 
 allUsers ::  GetUsers m => MonadLog m => m [User]
 allUsers  = do
-  users <- getUsers
-  logDebug $ "Users got: " <> (show $ length users)
-  return users
+  u <- getUsers
+  logDebug $ "Users got: " <> (show $ length u)
+  return u
 
 allUsers' ::  MonadGetUsers m => MonadLog m => m [User]
 allUsers'  = do
-  users <- getUsers'
-  logDebug $ "Users got: " <> (show $ length users)
-  return users
+  u <- getUsers'
+  logDebug $ "Users got: " <> (show $ length u)
+  return u
 
 addUser ::  SetUser m => MonadLog m => User -> m (Maybe String)
 addUser u = do
   userKey <- setUser u
   logDebug $ "Created user: " <> (show u)
   return $ Just userKey
-
-ping :: MonadIO m => m String
-ping = return "pong"
-
 data JwtPayload = JwtPayload
   { userId :: Int
   } deriving (Show, Eq, Generic)
@@ -143,45 +140,42 @@ instance FromJSON JwtPayload -- generated via Generic
 instance ToJWT JwtPayload
 instance FromJWT JwtPayload
 
+getCookie :: Maybe Text -> BS.ByteString -> Maybe BS.ByteString
+getCookie cookies n = lookup n =<< parseCookies . encodeUtf8 <$> cookies
+
+createJWT :: MonadIO m => JWTSettings -> Key DbUser -> m String
+createJWT jwtCfg userId' = do
+  expiration <- addUTCTime (fromInteger 300) <$> liftIO getCurrentTime
+  let userId'' :: Int = fromIntegral $ fromSqlKey userId'
+  jwte <- liftIO $ makeJWT (JwtPayload userId'') jwtCfg $ Just expiration
+  case jwte of
+    Left joseError -> error $ show joseError
+    Right x -> pure $ show x
+
 refresh :: MonadError ServerError m => RefreshToken m => MonadIO m => JWTSettings -> Maybe Text -> m (Headers '[Header "Set-Cookie" SetCookie] String)
 refresh jwtCfg cookies = do
-  let refreshTokenM = (lookup "Refresh-Token") =<< (parseCookies . encodeUtf8 <$> cookies)
-  case refreshTokenM of
-    Nothing -> throwError err401
-    Just refreshToken -> do
-      newRefreshTokenM <- redeemRefreshToken refreshToken
-      case newRefreshTokenM of
-        Nothing -> (liftIO $ putStrLn "token not in db") >> throwError err401
-        Just (newRefreshToken, userId') -> do
-          expiration <- addUTCTime (fromInteger 300) <$> liftIO getCurrentTime
-          let userId'' :: Int = fromIntegral $ fromSqlKey userId'
-          jwte <- liftIO $ makeJWT (JwtPayload userId'') jwtCfg $ Just expiration
-          liftIO $ putStrLn $ show jwte
-          let jwt = case jwte of
-                Left oops -> show oops
-                Right x -> show x
-          let cookie = def
-                  { setCookieName = "Refresh-Token"
-                  , setCookieValue = newRefreshToken
-                  }
-          return $ addHeader cookie jwt
+  refreshToken <- maybe
+    (throwError err401)
+    pure $ getCookie cookies "Refresh-Token"
+  (newRefreshToken, userId') <- (redeemRefreshToken refreshToken) >>= (maybe
+    ((liftIO $ putStrLn "token not in db") >> throwError err401)) pure
+  jwt <- createJWT jwtCfg userId'
+  let cookie = def
+          { setCookieName = "Refresh-Token"
+          , setCookieValue = newRefreshToken
+          }
+  pure $ addHeader cookie jwt
 
-test :: MonadError ServerError m => AuthResult User -> m String
-test (Authenticated _) = return "oi"
-test _ = throwError err401
-
-test' :: Monad m =>  User -> m String
-test' _ = return "oi"
-
--- serverT :: MonadError ServerError m => MonadIO m => UserStore m => MonadLog m => JWTSettings -> ServerT UserAPI m
--- serverT jwtCfg = allUsers :<|> addUser :<|> ping :<|> (refresh jwtCfg) :<|> test
-
-simpleServerT :: JWTSettings -> ServerT SimpleUserAPI App
-simpleServerT jwtCfg  = protected :<|>  ping :<|> (refresh jwtCfg) :<|> (login jwtCfg)
+p :: Proxy (ToServantApi ChorewheelApi)
+p = genericApi (Proxy :: Proxy ChorewheelApi)
 
 abstractApp :: JWTSettings -> (forall a. App a -> Handler a) -> Application
-abstractApp jwtCfg f = serveWithContext (Proxy @SimpleUserAPI) ctx $ hoistServerWithContext (Proxy @SimpleUserAPI) (Proxy @'[CookieSettings, JWTSettings])  f $ simpleServerT jwtCfg
-  where ctx = defaultCookieSettings :. jwtCfg :. EmptyContext
+--abstractApp jwtCfg f = genericServeTWithContext p ctx $ hoistServerWithContext p ctxProxy f
+abstractApp jwtCfg f = genericServeTWithContext f server ctx
+  where
+    ctx = defaultCookieSettings :. jwtCfg :. EmptyContext
+    server :: ChorewheelApi (AsServerT App)
+    server = appServer' jwtCfg
 
 -- Create a concrete App monad stack and derive MonadGetUsers instance for it
 -- using "GetUsersT"
@@ -190,3 +184,11 @@ newtype App a = App (ReaderT AppEnv (ExceptT ServerError IO) a)
   deriving MonadGetUsers via (GetUsersT App)
   deriving MonadLog via (ConsoleLogT App)
   deriving RefreshToken via (RefreshTokenT App)
+
+-- TODO: Investigate how to use this to convert internal errors to servant errors
+appToHandler :: ConnectionPool -> App a -> Handler a
+appToHandler pool (App m) = do
+  val <- liftIO $ runExceptT $ runReaderT m $ AppEnv pool
+  case val of
+    Left e -> throwError e
+    Right s -> return s

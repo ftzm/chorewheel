@@ -1,3 +1,5 @@
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -28,9 +30,8 @@ import           Database.Persist.Postgresql
 import qualified Data.ByteString.Char8                as BS
 import Data.List (intercalate)
 import Data.Text (Text, pack)
-import           Database.Persist.TH  (mkMigrate, mkPersist, persistLowerCase,
+import           Database.Persist.TH  (mkPersist, persistLowerCase,
                                        share, sqlSettings)
-import           Database.Persist.Sql (SqlPersistT, runMigration, runSqlPool)
 import Control.Monad.Logger (runStdoutLoggingT)
 import System.Exit (die)
 import GHC.Generics
@@ -50,7 +51,7 @@ import Auth
 
 share
     [ mkPersist sqlSettings
-    , mkMigrate "migrateAll"
+    --, mkMigrate "migrateAll"
     ] [persistLowerCase|
 DbUser sql=user
     name Text
@@ -102,8 +103,8 @@ makeConnStr PostgresConfig {..} =
   , "password=" <> password
   ]
 
-doMigrations :: SqlPersistT IO ()
-doMigrations = runMigration migrateAll
+--doMigrations :: SqlPersistT IO ()
+--doMigrations = runMigration migrateAll
 
 makePool :: IO ConnectionPool
 makePool = do
@@ -112,7 +113,7 @@ makePool = do
     Left e -> die $ "Error creating Postgresql Connection Pool: " <> e
     Right c  -> do
       pool <- (runStdoutLoggingT $ createPostgresqlPool (makeConnStr c) 1)
-      runSqlPool doMigrations pool
+      --runSqlPool doMigrations pool
       return pool
 
 
