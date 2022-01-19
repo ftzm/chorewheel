@@ -24,7 +24,7 @@ dependencies:
 - bytestring
 - base64-bytestring
 - envparse
-- persistent
+- persistent >= 2.13
 - persistent-postgresql
 - persistent-template
 - monad-logger
@@ -34,9 +34,12 @@ dependencies:
 - servant
 - servant-server
 - servant-auth-server
+- servant-swagger
+- swagger2
 - text
 - aeson
 - warp
+- transformers
 - mtl
 - generic-lens
 - cryptonite
@@ -45,6 +48,17 @@ dependencies:
 - exceptions
 - word8
 - memory
+- optics
+- hasql
+- hasql-th
+- hasql-pool
+- hasql-transaction
+- profunctors
+- utf8-string
+# For Tests
+- tasty
+- tasty-hunit
+- tmp-postgres
 
 ghc-options:
   - -Wall
@@ -63,3 +77,13 @@ executables:
     - -with-rtsopts=-N
     dependencies:
     - chorewheel
+
+tests:
+  spec:
+    main: Spec.hs
+    source-dirs:
+      - test
+      - src
+    dependencies:
+      - tasty
+      - tasty-hunit

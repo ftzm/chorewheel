@@ -1,6 +1,6 @@
 let
   pkgs = import (import ./nix/sources.nix).nixpkgs {};
-  compilerVersion = "ghc865";
+  compilerVersion = "ghc8107";
   compiler = pkgs.haskell.packages."${compilerVersion}";
 in
   compiler.developPackage {
@@ -10,5 +10,6 @@ in
         [ cabal-install
           ghcid
           pkgs.docker-compose
+          pkgs.postgresql
         ]);
   }

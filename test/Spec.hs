@@ -11,14 +11,20 @@ import qualified Hasql.Pool as Pool
 import qualified Hasql.Session as Session
 import qualified Hasql.Transaction as T
 import qualified Hasql.Transaction.Sessions as TS
-import Data.Either
+--import Data.Either
 import Data.Functor
+import Data.Maybe
 import Database.Postgres.Temp
 import Data.ByteString(readFile)
+import Control.Monad.Error.Class
+import Data.Time.Clock
+import Control.Monad.IO.Class
 
 
 import Models
 import DB.User
+import DB.Password
+import DB.RefreshToken
 
 -------------------------------------------------------------------------------
 -- Test utils
@@ -43,8 +49,15 @@ poolTransS pool input statement =
                     T.condemn
                     return output
 
-withRollback :: Pool.Pool -> Session.Session a -> IO (Either Pool.UsageError a)
-withRollback p s = Pool.use p $ Session.sql "BEGIN" *> s <* Session.sql "ROLLBACK"
+withRollback :: Pool.Pool -> Session.Session a -> IO a
+withRollback p s =
+  Pool.use p protectedSession >>= either (fail . show) return
+  where
+    protectedSession = do
+      Session.sql "BEGIN"
+      result <- catchError (Right <$> s) $ \e -> pure $ Left e
+      Session.sql "ROLLBACK"
+      either throwError return result
 
 createTestPool :: DB -> IO Pool.Pool
 createTestPool db = do
@@ -54,7 +67,7 @@ createTestPool db = do
   Pool.use pool $ Session.sql migration
   return pool
 
-type SessionRunner = forall a. Session.Session a -> IO (Either Pool.UsageError a)
+type SessionRunner = forall a. Session.Session a -> IO a
 
 -------------------------------------------------------------------------------
 main :: IO ()
@@ -66,21 +79,49 @@ main = void $ with $ \db -> do
 tests :: SessionRunner -> TestTree
 tests runS = testGroup "Tests" [unitTests runS]
 
+assertCompletes :: Assertion
+assertCompletes  = True @?= True
+
 unitTests :: SessionRunner -> TestTree
 unitTests runS = testGroup "Query Tests"
   [ testCase "Do the thing" $ False @?= False
   , testCase "The other" $ return () >>= \x -> x @?= ()
   -- User
   , testCase "Insert user" $ do
-      x <- runS $ Session.statement (User "test" "test") insertUser
-      isRight x @?= True
-  , testCase "Insert user 2" $ do
-      x <- runS $ Session.statement (User "test" "test") insertUser
-      isRight x @?= True
+      runS $ Session.statement (User "test" "test") insertUser
+      assertCompletes
   , testCase "Select user" $ do
-      result <- runS $ do
+      runS $ do
         newId <- Session.statement (User "test" "test") insertUser
         Session.statement newId selectUser
-      isRight result @?= True
+      --("at" :: String) @?= "no"
+      assertCompletes
   -- Password
+  , testCase "Password round trip id" $ do
+      let pw = PasswordHash "test_password"
+      dbPw <- runS $ do
+        newId <- Session.statement (User "test" "test") insertUser
+        Session.statement (newId, pw) insertPassword
+        Session.statement newId selectPassword
+      pw @?= dbPw
+  , testCase "Password round trip username" $ do
+      let pw = PasswordHash "test_password"
+      result <- runS $ do
+        newId <- Session.statement (User "test" "test") insertUser
+        Session.statement (newId, pw) insertPassword
+        Session.statement (Username "test") passwordInfoByUsername
+      isJust result @?= True
+  -- RefreshToken
+  , testCase "Token round trip" $ do
+      expiry <- addUTCTime (fromInteger 3000) <$> liftIO getCurrentTime
+      now <- liftIO getCurrentTime
+      let token = "test_token"
+      (originalId, dbUserId) <- runS $ do
+        originalId <- Session.statement (User "test" "test") insertUser
+        Session.statement (originalId, token, expiry) upsertToken
+        Session.statement (originalId, token, expiry) upsertToken --update
+        dbUserId <- Session.statement (token, now) selectToken
+        Session.statement originalId deleteToken
+        return $ (originalId, dbUserId)
+      originalId @?= fromJust dbUserId
   ]

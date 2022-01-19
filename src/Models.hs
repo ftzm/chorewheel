@@ -13,6 +13,7 @@ import Data.Aeson
 import Data.Text (Text)
 import Data.Int (Int32)
 import Control.Monad.Trans
+import Data.ByteString
 
 data User = User
   { name :: Text
@@ -23,6 +24,16 @@ instance ToJSON User -- generated via Generic
 instance FromJSON User -- generated via Generic
 instance ToJWT User
 instance FromJWT User
+
+data JwtPayload = JwtPayload
+  { userId :: Int32
+  } deriving (Show, Eq, Generic)
+
+instance ToJSON JwtPayload -- generated via Generic
+instance FromJSON JwtPayload -- generated via Generic
+
+instance ToJWT JwtPayload
+instance FromJWT JwtPayload
 
 class Monad m => GetUsers m where
   getUsers :: m [User]
@@ -43,6 +54,14 @@ instance {-# OVERLAPPABLE #-}
   ) => GetUsers (t m) where
   getUsers = lift getUsers
 
-newtype UserId = UserId {unUserId :: Int32} deriving Show
+newtype UserId = UserId {unUserId :: Int32} deriving (Show, Eq)
 
-newtype PasswordHash = PasswordHash Text
+newtype Username = Username { unUsername :: Text } deriving Show
+
+newtype RefreshToken = RefreshToken { unRefreshToken :: ByteString } deriving Show
+
+newtype Jwt = Jwt { unJwt :: ByteString } deriving Show
+
+newtype Password = Password { unPassword :: ByteString } deriving (Show, Eq)
+
+newtype PasswordHash = PasswordHash { unPasswordHash :: Text } deriving (Show, Eq)
