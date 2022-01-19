@@ -17,7 +17,6 @@ import Data.Text (Text, stripPrefix, break, drop)
 import Data.Text.Encoding
 import Control.Monad.Error.Class
 import Control.Monad
-import Control.Monad.IO.Class
 import Data.ByteString.Base64 (decodeLenient)
 
 import Models
@@ -44,7 +43,7 @@ data AuthApi route = AuthApi
 
 authApi :: ToServant AuthApi (AsServerT App)
 authApi = genericServerT AuthApi
-  { _login = login'
+  { _login = login
   , _refresh = refresh
   }
 
@@ -71,17 +70,6 @@ login ::
   Maybe Text ->
   m (Headers '[Header "Set-Cookie" SetCookie] Text)
 login header = do
-  let components = parseBasicAuthHeader =<< header
-  result <- join <$> traverse (uncurry loginForTokens) components
-  justOrErr err401 $ uncurry createResponse <$> result
-
-login' ::
-  MonadIO m =>
-  MonadError ServerError m =>
-  AuthM m =>
-  Maybe Text ->
-  m (Headers '[Header "Set-Cookie" SetCookie] Text)
-login' header = do
   let components = parseBasicAuthHeader =<< header
   result <- join <$> traverse (uncurry loginForTokens) components
   justOrErr err401 $ uncurry createResponse <$> result
