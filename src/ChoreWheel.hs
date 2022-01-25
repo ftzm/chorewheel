@@ -13,14 +13,23 @@ import Servant.Auth.Server
 import Control.Monad.Reader
 import           Control.Monad.Error.Class
 import Control.Monad.Except
-  --
--- import qualified Hasql.Pool as HP
--- import Effect.Auth
--- import Models
+--
+import qualified Hasql.Pool as HP
+import qualified Hasql.Session as HS
+import Effect.Auth
+import DB.User
+import Models
 
 import App
 import API.Root
 import DB
+
+createTestUser :: HP.Pool -> IO ()
+createTestUser p = do
+  i <- (HP.use p $ HS.statement (User "matt" "m@test.com") insertUser)
+    >>= either (fail . show) return
+  HP.use p $ createPassword i (Password "test")
+  return ()
 
 -- TODO: Investigate how to use this to convert internal errors to servant errors
 appToHandler :: AppEnv -> App a -> Handler a
@@ -38,9 +47,10 @@ choreWheelApp jwtCfg f = genericServeTWithContext f choreWheelApi ctx
 runApp :: IO ()
 runApp = do
   pool <- createPool
-  --HP.use pool $ createPassword (UserId 1) (Password"test")
+  --createTestUser pool
   jwtCfg <- defaultJWTSettings <$> generateKey
-  let env = AppEnv { _pool = pool
-                   , _jwtCfg = jwtCfg
-                   }
+  let env = AppEnv
+        { _pool = pool
+        , _jwtCfg = jwtCfg
+        }
   run 8080 $ choreWheelApp jwtCfg $ appToHandler env
