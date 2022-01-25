@@ -1,10 +1,8 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.34.6.
+-- This file has been generated from package.yaml by hpack version 0.34.2.
 --
 -- see: https://github.com/sol/hpack
---
--- hash: 7c843aeb88c1fa2aa575d300b867d27b5d95092cb9287d0104b10874cf053f74
 
 name:           chorewheel
 version:        0.1.0.0
@@ -28,6 +26,7 @@ library
       API.User
       API.Util
       App
+      Chore
       ChoreWheel
       DB
       DB.Password
@@ -44,13 +43,13 @@ library
   ghc-options: -Wall -Werror -Wno-unused-do-bind
   build-depends:
       aeson
-    , base >=4.7 && <5
+    , base >=4.10 && <5
     , base64-bytestring
     , bytestring
+    , containers
     , cookie
     , cryptonite
     , envparse
-    , esqueleto
     , exceptions
     , generic-lens
     , hasql
@@ -61,17 +60,11 @@ library
     , monad-control
     , monad-logger
     , mtl
-    , optics
-    , persistent >=2.13
-    , persistent-postgresql
-    , persistent-template
     , profunctors
     , resource-pool
     , servant
     , servant-auth-server
     , servant-server
-    , servant-swagger
-    , swagger2
     , tasty
     , tasty-hunit
     , text
@@ -92,14 +85,14 @@ executable chorewheel
   ghc-options: -Wall -Werror -Wno-unused-do-bind -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       aeson
-    , base >=4.7 && <5
+    , base >=4.10 && <5
     , base64-bytestring
     , bytestring
     , chorewheel
+    , containers
     , cookie
     , cryptonite
     , envparse
-    , esqueleto
     , exceptions
     , generic-lens
     , hasql
@@ -110,17 +103,11 @@ executable chorewheel
     , monad-control
     , monad-logger
     , mtl
-    , optics
-    , persistent >=2.13
-    , persistent-postgresql
-    , persistent-template
     , profunctors
     , resource-pool
     , servant
     , servant-auth-server
     , servant-server
-    , servant-swagger
-    , swagger2
     , tasty
     , tasty-hunit
     , text
@@ -141,6 +128,7 @@ test-suite spec
       API.User
       API.Util
       App
+      Chore
       ChoreWheel
       DB
       DB.Password
@@ -157,13 +145,13 @@ test-suite spec
   ghc-options: -Wall -Werror -Wno-unused-do-bind
   build-depends:
       aeson
-    , base >=4.7 && <5
+    , base >=4.10 && <5
     , base64-bytestring
     , bytestring
+    , containers
     , cookie
     , cryptonite
     , envparse
-    , esqueleto
     , exceptions
     , generic-lens
     , hasql
@@ -174,17 +162,11 @@ test-suite spec
     , monad-control
     , monad-logger
     , mtl
-    , optics
-    , persistent >=2.13
-    , persistent-postgresql
-    , persistent-template
     , profunctors
     , resource-pool
     , servant
     , servant-auth-server
     , servant-server
-    , servant-swagger
-    , swagger2
     , tasty
     , tasty-hunit
     , text

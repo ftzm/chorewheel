@@ -24,18 +24,14 @@ dependencies:
 - bytestring
 - base64-bytestring
 - envparse
-- persistent >= 2.13
-- persistent-postgresql
-- persistent-template
 - monad-logger
 - monad-control
 - resource-pool
-- esqueleto
 - servant
 - servant-server
 - servant-auth-server
-- servant-swagger
-- swagger2
+#- servant-swagger
+# - swagger2
 - text
 - aeson
 - warp
@@ -48,13 +44,14 @@ dependencies:
 - exceptions
 - word8
 - memory
-- optics
+#- optics
 - hasql
 - hasql-th
 - hasql-pool
 - hasql-transaction
 - profunctors
 - utf8-string
+- containers
 # For Tests
 - tasty
 - tasty-hunit
