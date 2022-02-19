@@ -27,8 +27,8 @@ dependencies:
 - monad-logger
 - monad-control
 - resource-pool
-- servant
-- servant-server
+- servant >= 0.19
+- servant-server >= 0.4.7.0
 - servant-auth-server
 #- servant-swagger
 # - swagger2

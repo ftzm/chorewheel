@@ -12,7 +12,7 @@
 
 module API.Root where
 
---import Servant.Server
+import Servant.Server
 import Servant.Server.Generic
 import Servant.API
 import Servant.API.Generic
@@ -27,26 +27,53 @@ import App
 import API.Auth
 import API.User
 
+---------------------------------------------------------------------------
+-- test
+
+data SubApi mode = SubApi { _route :: mode :- "test" :> Get '[PlainText] String } deriving Generic
+
+subApi :: SubApi (AsServerT App)
+subApi = SubApi { _route = return "shaboy" }
+
+data RootApi mode = RootApi { _sub :: mode :- "sub" :> NamedRoutes SubApi } deriving Generic
+
+rootApi :: ToServant RootApi (AsServerT App)
+rootApi = genericServerT RootApi { _sub = subApi }
+
+-- So it turns out that if you want to be able to `throwAll err401` on a whole
+-- subroot, then that subroot needs to have the type `ToServant ApiType
+-- (AsServer AppMonad)`. Subroots of /that/ subroot may however have the type
+-- NamedRoutes SubApi.
+
+---------------------------------------------------------------------------
+
 data ChoreWheelApi mode = ChoreWheelApi
   { _ping :: mode
       :- "ping"
       :> Get '[PlainText] String
   , _auth :: mode
       :- "auth"
-      :> ToServant AuthApi AsApi
+      :> NamedRoutes AuthApi
   , _user :: mode
       :- "user"
       :> Auth '[JWT] JwtPayload
       :> ToServant UserApi AsApi
+  , _root :: mode
+      :- "root"
+      :> ToServant RootApi AsApi
   } deriving Generic
+
+protect :: ThrowAll r => (a -> r) -> AuthResult a -> r
+protect r (Authenticated a) = r a
+protect _ _ = throwAll err401
 
 choreWheelApi :: ChoreWheelApi (AsServerT App)
 choreWheelApi = ChoreWheelApi
   { _ping = return "pong"
   , _auth = authApi
-  , _user = userApi
+  , _user = protect userApi
+  , _root = rootApi
   }
-
 
 --- apiProxy :: Proxy ChoreWheelApi
 --- apiProxy = Proxy

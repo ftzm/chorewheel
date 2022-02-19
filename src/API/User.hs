@@ -34,10 +34,14 @@ data UserApi route = UserApi
 -------------------------------------------------------------------------------
 -- Implementation
 
-userApi :: (AuthResult JwtPayload) -> ToServant UserApi (AsServerT App)
-userApi (Authenticated (JwtPayload i)) = genericServerT UserApi
+userApi' :: (AuthResult JwtPayload) -> ToServant UserApi (AsServerT App)
+userApi' (Authenticated (JwtPayload i)) = genericServerT UserApi
   { _me = me $ UserId i }
-userApi _ = throwAll err401
+userApi' _ = throwAll err401
+
+userApi :: JwtPayload -> ToServant UserApi (AsServerT App)
+userApi (JwtPayload i) = genericServerT UserApi
+  { _me = me $ UserId i }
 
 me :: UserM m => UserId -> m User
 me i = getUser i

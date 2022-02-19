@@ -1,6 +1,6 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.34.2.
+-- This file has been generated from package.yaml by hpack version 0.34.6.
 --
 -- see: https://github.com/sol/hpack
 
@@ -43,7 +43,7 @@ library
   ghc-options: -Wall -Werror -Wno-unused-do-bind
   build-depends:
       aeson
-    , base >=4.10 && <5
+    , base >=4.7 && <5
     , base64-bytestring
     , bytestring
     , containers
@@ -62,9 +62,9 @@ library
     , mtl
     , profunctors
     , resource-pool
-    , servant
+    , servant >=0.19
     , servant-auth-server
-    , servant-server
+    , servant-server >=0.4.7.0
     , tasty
     , tasty-hunit
     , text
@@ -85,7 +85,7 @@ executable chorewheel
   ghc-options: -Wall -Werror -Wno-unused-do-bind -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       aeson
-    , base >=4.10 && <5
+    , base >=4.7 && <5
     , base64-bytestring
     , bytestring
     , chorewheel
@@ -105,9 +105,9 @@ executable chorewheel
     , mtl
     , profunctors
     , resource-pool
-    , servant
+    , servant >=0.19
     , servant-auth-server
-    , servant-server
+    , servant-server >=0.4.7.0
     , tasty
     , tasty-hunit
     , text
@@ -145,7 +145,7 @@ test-suite spec
   ghc-options: -Wall -Werror -Wno-unused-do-bind
   build-depends:
       aeson
-    , base >=4.10 && <5
+    , base >=4.7 && <5
     , base64-bytestring
     , bytestring
     , containers
@@ -164,9 +164,9 @@ test-suite spec
     , mtl
     , profunctors
     , resource-pool
-    , servant
+    , servant >=0.19
     , servant-auth-server
-    , servant-server
+    , servant-server >=0.4.7.0
     , tasty
     , tasty-hunit
     , text

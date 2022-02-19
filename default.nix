@@ -18,5 +18,6 @@ in
          ghcid
          pkgs.docker-compose
          pkgs.postgresql
+         hlint
        ]);
  }

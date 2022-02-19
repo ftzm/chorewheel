@@ -41,8 +41,8 @@ data AuthApi route = AuthApi
 -------------------------------------------------------------------------------
 -- Implementation
 
-authApi :: ToServant AuthApi (AsServerT App)
-authApi = genericServerT AuthApi
+authApi :: AuthApi (AsServerT App)
+authApi = AuthApi
   { _login = login
   , _refresh = refresh
   }
