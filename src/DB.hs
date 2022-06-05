@@ -45,7 +45,9 @@ createPool = do
   connStr <- case config of
     Left e -> die $ "Fuck: Error creating Postgresql Connection Pool: " <> e
     Right c -> return $ makeConnStr c
-  pool <- HP.acquire (10, 60, connStr)
+  -- pool <- HP.acquire (10, 60, connStr)
+  -- pool siz timeout connstr
+  pool <- HP.acquire 10 connStr
   return pool
 
 -- TODO: Handle db errors better

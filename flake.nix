@@ -1,63 +1,79 @@
 {
-  description = "chorewheel";
-
-  # Fix:
-  # It looks like in nix 2.6.1 the follows directive only looks in the root
-  # flake (regression?), which means that the nixpkgs.follows in the haskellNix
-  # flake can't resolve because the nixpkgs.follows /there/ can't find a
-  # nixpkgs-unstable /here/. We can work around this by making a
-  # nixpkgs-unstable input here that follows the one in the haskellNix flake,
-  # which means that everything ends up using the intended version of nixpkgs.
-  inputs.nixpkgs-unstable.follows = "haskellNix/nixpkgs-unstable";
-
-  # Original
+  description = "Chorewheel";
   inputs.haskellNix.url = "github:input-output-hk/haskell.nix";
   inputs.nixpkgs.follows = "haskellNix/nixpkgs-unstable";
   inputs.flake-utils.url = "github:numtide/flake-utils";
-
-  outputs = { self, nixpkgs, flake-utils, haskellNix, ... }:
-    flake-utils.lib.eachDefaultSystem (system:
+  outputs = { self, nixpkgs, flake-utils, haskellNix }:
+    flake-utils.lib.eachSystem [ "x86_64-linux" "x86_64-darwin" ] (system:
       let
-        overlay = self: _: {
-          hsPkgs =
-            self.haskell-nix.project' rec {
+        ghcVersion = "902";
+        devDrv = pkgs.mkShell {
+          buildInputs = with pkgs;
+            [
+              haskell.compiler."ghc${ghcVersion}"
+              cabal-install
+              hlint
+              (pkgs.haskell-language-server.override {
+                supportedGhcVersions = [ ghcVersion ];
+              })
+              zlib
+              postgresql
+            ];
+        };
+        overlays = [
+          haskellNix.overlay
+          (final: prev: {
+            # This overlay adds our project to pkgs
+            chorewheel = final.haskell-nix.project' {
               src = ./.;
-              compiler-nix-name = "ghc8107";
-              shell = {
-                tools = {
-                  hpack = "latest";
-                  cabal = "latest";
-                  ghcid = "latest";
-                  haskell-language-server = "latest";
-                  hlint = "latest";
-                  # See https://github.com/input-output-hk/haskell.nix/issues/1337
-                  ormolu = {
-                    version = "latest";
-                    modules = [ ({ lib, ... }: { options.nonReinstallablePkgs = lib.mkOption { apply = lib.remove "Cabal"; }; }) ];
-                  };
-                };
-                ## ormolu that uses ImportQualifiedPost.
-                ## To use, remove ormolu from the shell.tools section above, and uncomment the following lines.
-                # buildInputs =
-                #   let
-                #     ormolu = pkgs.haskell-nix.tool compiler-nix-name "ormolu" "latest";
-                #     ormolu-wrapped = pkgs.writeShellScriptBin "ormolu" ''
-                #       ${ormolu}/bin/ormolu --ghc-opt=-XImportQualifiedPost $@
-                #     '';
-                #   in
-                #   [ ormolu-wrapped ];
-              };
+              compiler-nix-name = "ghc${ghcVersion}";
+
+              # We don't use this (standard?) source for tools because we'd
+              # rather get cached versions from nixpkgs than build with our
+              # pinned dependencies.
+              #
+              # This is used by `nix develop .` to open a shell for use with
+              # `cabal`, `hlint` and `haskell-language-server`
+              # shell.tools = let
+              #   modules = [
+              #     ({ lib, ... }: {
+              #       # https://github.com/input-output-hk/haskell.nix/issues/829
+              #       config.dontStrip = false;
+              #       # https://github.com/input-output-hk/haskell.nix/issues/1177
+              #       config.reinstallableLibGhc = true;
+              #       # options.nonReinstallablePkgs =
+              #       #   lib.mkOption { apply = x: [ "exceptions" "stm" ] ++ x; };
+              #     })
+              #   ];
+              # in {
+              #   cabal = { };
+              #   hlint = {};
+              #   haskell-language-server = {
+              #     inherit modules;
+              #   };
+              # };
+
+              shell.buildInputs = with pkgs; [
+                nixpkgs-fmt
+                cabal-install
+                hlint
+                haskell-language-server
+              ];
+
             };
-        };
+          })
+        ];
         pkgs = import nixpkgs {
-          inherit system;
-          overlays = [
-            haskellNix.overlay
-            overlay
-          ];
+          inherit system overlays;
+          inherit (haskellNix) config;
         };
-        flake = pkgs.hsPkgs.flake { };
-      in
-      flake // { defaultPackage = flake.packages."chorewheel:exe:chorewheel"; }
-    );
+        flake = pkgs.chorewheel.flake { };
+      in flake // {
+        # Built by `nix build .`
+        defaultPackage = flake.packages."chorewheel:exe:chorewheel";
+        # We use a separate derivation for the shell so that you don't need to
+        # build all of our packages just to use cached binaries.
+        devShell = devDrv;
+      });
 }
+
