@@ -10,16 +10,6 @@ data Weekday = Mon | Tue | Wed | Thu | Fri | Sat | Sun deriving (Show, Eq, Ord, 
 getWeekday :: Day -> Weekday
 getWeekday = toEnum . subtract 1 . fromEnum . dayOfWeek
 
-
--- >>> toEnum . fromEnum $ Wednesday :: Weekday
--- Thu
-
--- >>> getWeekday wed
--- Wed
-
--- >>> toEnum 1 :: Weekday
--- Tue
-
 safeToEnum :: forall t. (Enum t, Bounded t) => Int -> Maybe t
 safeToEnum i
   | (i >= fromEnum (minBound :: t)) &&
@@ -43,17 +33,3 @@ getDayOfMonth = DayOfMonth . (\(_, _, d) -> d ) . toGregorian
 -- zero indexed, unlike the time library
 getMonthInt :: Day -> Int
 getMonthInt = subtract 1 . (\(_, m, _) -> m ) . toGregorian
-
--- getMonth :: Day -> Month
--- getMonth = toEnum . getMonthEnumInt
-
---data YearDate = Date Month DayOfMonth
-
-class FromDay a where
-  fromDay :: Day -> a
-
-instance FromDay Weekday where
-  fromDay = getWeekday
-
-instance FromDay DayOfMonth where
-  fromDay = getDayOfMonth
