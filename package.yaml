@@ -60,6 +60,7 @@ dependencies:
 ghc-options:
   - -Wall
   - -Werror
+  - -Wwarn=missing-home-modules
   - -Wno-unused-do-bind
 library:
   source-dirs: src

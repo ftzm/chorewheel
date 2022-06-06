@@ -1,21 +1,55 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE DuplicateRecordFields #-}
+-- TypeNats experiment
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE RankNTypes #-}
+
 module Chore where
 
 import Data.Time.Clock
 import Data.Time.Calendar
---import Data.Time.Calendar.OrdinalDate
-import Data.Set (Set(..))
 
---data Day = Mon | Tue | Wed | Thu | Fri | Sat | Sun deriving Eq
+-- data Schedule
+--   -- ^ Schedule next task n days since the task was completed, even if late.
+--   = FlexDays Int
+--   -- ^ Schedule tasks n days apart.
+--   | StrictDays Int
+--   | WeeklyPattern (Pattern Weekday)
+--   | MonthlyPattern (Pattern DayOfMonth)
+--   --  | StrictYear (Set YearDate) Interval
 
---data Month = Jan | Feb | Mar | Apr | May | Jun | Jul | Aug | Sep | Oct | Nov | Dec
+-- data ScheduleState
+--   = FlexDayState Int Day
+--   | StrictDayState Int Day
+--   | WeeklyPatternState (PatternState Weekday)
+--   | MonthlyPatternState (PatternState DayOfMonth)
 
-data IntervalUnit = Day | Week | Month | Year
+-- data ScheduleStateConstructionError
+--   = PositionOutOfRange
+--   | DayInvalid
 
-data Schedule = Repeat Int IntervalUnit | Weekly (Set DayOfWeek)
+-- nextDayFromScheduleState :: ScheduleState -> ScheduleState
+-- nextDayFromScheduleState s = case s of
+--   FlexDayState i d -> FlexDayState i $ findNextFlexDay d i
+--   StrictDayState i d -> StrictDayState i $ findNextStrictDay d i
+--   WeeklyPatternState ps -> WeeklyPatternState $ weekPatternStateStep ps
+--   MonthlyPatternState ps  -> MonthlyPatternState $ monthPatternStateStep ps
 
+-- findNextFlexDay :: Day -> Int -> Day
+-- findNextFlexDay = undefined
+
+-- findNextStrictDay :: Day -> Int -> Day
+-- findNextStrictDay = undefined
+
+-------------------------------------------------------------------------------
 -- | Represents a period of time. The first date is guaranteed to be before the
 -- second date.
-data Period = UTCTime UTCTime
+newtype Period = UTCTime UTCTime
 
 data Resolution
   = Completed UTCTime
@@ -43,25 +77,26 @@ data ChoreStatus
   -- today the chore should have been scheduled n additional times.
   | Skipped Int
 
-data ChoreState = ChoreState
-  -- | the first scheduled occurrence of this task. This represents either the
-  -- first scheduled instance of a task ever, or the first scheduled instance
-  -- of a task since after if was last completed.
-  { firstScheduled :: Day
-  , scheduled :: Schedule
-  }
+-- data ChoreState = ChoreState
+--   -- | the first scheduled occurrence of this task. This represents either the
+--   -- first scheduled instance of a task ever, or the first scheduled instance
+--   -- of a task since after if was last completed.
+--   { firstScheduled :: Day
+--   , schedule :: Schedule
+--   }
 
-scheduleStep :: Schedule -> Day -> Day
-scheduleStep (Weekly days) d =
-  head $ filter ((`elem` days) . dayOfWeek) [(succ d)..]
-scheduleStep (Repeat interval unit) d = case unit of
-  Day -> undefined
-  Month -> undefined
-  Year -> undefined
+newtype Scheduled = Scheduled { unScheduled :: Day}
+newtype Resolved = Resolved { unResolved :: Day}
 
-data ChoreStatus' = ChoreStatus'
 
--- resolve
+-- Necessary operations
 
--- Given a ChoreState and a date, produce the status for that day; be it
--- overdue, gone around, what have you.
+-- create schedule
+-- show schedule
+-- edit schedule
+
+-- set first schedule day
+-- get all schedule days into the future
+
+-- non destructive schedule edits form schedules with past days associated
+--

@@ -12,6 +12,7 @@
             [
               haskell.compiler."ghc${ghcVersion}"
               cabal-install
+              hpack
               hlint
               (pkgs.haskell-language-server.override {
                 supportedGhcVersions = [ ghcVersion ];
@@ -76,4 +77,3 @@
         devShell = devDrv;
       });
 }
-
