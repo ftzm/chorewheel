@@ -65,3 +65,5 @@ newtype Jwt = Jwt { unJwt :: ByteString } deriving Show
 newtype Password = Password { unPassword :: ByteString } deriving (Show, Eq)
 
 newtype PasswordHash = PasswordHash { unPasswordHash :: Text } deriving (Show, Eq)
+
+newtype SessionToken = SessionToken { unSessionToken :: Text } deriving (Show, Eq)
