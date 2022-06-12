@@ -1,11 +1,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE RankNTypes #-}
@@ -25,7 +21,7 @@ import Effect.User
 -------------------------------------------------------------------------------
 -- API
 
-data UserApi route = UserApi
+newtype UserApi route = UserApi
   { _me :: route
       :- "me"
       :> Get '[JSON] User
@@ -34,7 +30,7 @@ data UserApi route = UserApi
 -------------------------------------------------------------------------------
 -- Implementation
 
-userApi' :: (AuthResult JwtPayload) -> ToServant UserApi (AsServerT App)
+userApi' :: AuthResult JwtPayload -> ToServant UserApi (AsServerT App)
 userApi' (Authenticated (JwtPayload i)) = genericServerT UserApi
   { _me = me $ UserId i }
 userApi' _ = throwAll err401
@@ -44,4 +40,4 @@ userApi (JwtPayload i) = genericServerT UserApi
   { _me = me $ UserId i }
 
 me :: UserM m => UserId -> m User
-me i = getUser i
+me = getUser

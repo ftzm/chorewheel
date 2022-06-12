@@ -44,6 +44,10 @@ dependencies:
 - exceptions
 - word8
 - memory
+- lucid2
+- servant-lucid
+- wai
+- http-api-data
 #- optics
 - hasql
 - hasql-th
@@ -52,20 +56,25 @@ dependencies:
 - profunctors
 - utf8-string
 - containers
+- http-media
 # For Tests
 - tasty
 - tasty-hunit
 - tmp-postgres
+- process
 
 ghc-options:
-  - -Wall
-  - -Werror
+  # - -Wall
+  # - -Werror
   - -Wno-unused-do-bind
+  - -Wno-missing-home-modules
+  - -Wno-type-defaults
+  - -Wno-orphans
 library:
   source-dirs: src
 
 executables:
-  chorewheel:
+  chorewheel-exe:
     main:                Main.hs
     source-dirs:         app
     ghc-options:

@@ -13,11 +13,17 @@
               haskell.compiler."ghc${ghcVersion}"
               cabal-install
               hlint
+              hpack
+              ghcid
               (pkgs.haskell-language-server.override {
                 supportedGhcVersions = [ ghcVersion ];
               })
               zlib
               postgresql
+              inotify-tools
+              lsof
+              expect
+              entr
             ];
         };
         overlays = [
@@ -76,4 +82,3 @@
         devShell = devDrv;
       });
 }
-

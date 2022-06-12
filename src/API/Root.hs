@@ -1,14 +1,12 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 
 module API.Root where
 
@@ -17,25 +15,36 @@ import Servant.Server.Generic
 import Servant.API
 import Servant.API.Generic
 import Servant.Auth.Server
+--import Servant.HTML.Lucid
 --import qualified Hasql.Pool as HP
 --import Servant.Swagger
 --import Data.Swagger
 --import Data.Proxy
+import Lucid
+import Data.Text
+import Data.Text.Encoding
+import Control.Monad
 
 import Models
 import App
 import API.Auth
 import API.User
+import API.Frontend.Home
+import API.Frontend.Login
+import API.Util
+import Effect.Auth.Session
+import Effect.User
+import ServantLucid
 
 ---------------------------------------------------------------------------
 -- test
 
-data SubApi mode = SubApi { _route :: mode :- "test" :> Get '[PlainText] String } deriving Generic
+newtype SubApi mode = SubApi { _route :: mode :- "test" :> Get '[PlainText] String } deriving Generic
 
 subApi :: SubApi (AsServerT App)
 subApi = SubApi { _route = return "shaboy" }
 
-data RootApi mode = RootApi { _sub :: mode :- "sub" :> NamedRoutes SubApi } deriving Generic
+newtype RootApi mode = RootApi { _sub :: mode :- "sub" :> NamedRoutes SubApi } deriving Generic
 
 rootApi :: ToServant RootApi (AsServerT App)
 rootApi = genericServerT RootApi { _sub = subApi }
@@ -47,6 +56,7 @@ rootApi = genericServerT RootApi { _sub = subApi }
 
 ---------------------------------------------------------------------------
 
+
 data ChoreWheelApi mode = ChoreWheelApi
   { _ping :: mode
       :- "ping"
@@ -54,13 +64,21 @@ data ChoreWheelApi mode = ChoreWheelApi
   , _auth :: mode
       :- "auth"
       :> NamedRoutes AuthApi
-  , _user :: mode
-      :- "user"
-      :> Auth '[JWT] JwtPayload
-      :> ToServant UserApi AsApi
+  --, _user :: mode
+  --    :- "user"
+  --    :> Auth '[JWT] JwtPayload
+  --    :> ToServant UserApi AsApi
   , _root :: mode
       :- "root"
       :> ToServant RootApi AsApi
+  , _login :: mode
+      :- "login"
+      :> Header "Cookie" Text
+      :> Get '[HTML] (Html ())
+  , _home :: mode
+      :- "home"
+      :> AuthProtect "session-auth"
+      :> Get '[HTML] (Html ())
   } deriving Generic
 
 protect :: ThrowAll r => (a -> r) -> AuthResult a -> r
@@ -71,9 +89,22 @@ choreWheelApi :: ChoreWheelApi (AsServerT App)
 choreWheelApi = ChoreWheelApi
   { _ping = return "pong"
   , _auth = authApi
-  , _user = protect userApi
+  --, _user = protect userApi
   , _root = rootApi
+  --, _login = \header -> return API.Frontend.Login.login
+  , _login = handleLogin
+  , _home = \userId -> return home
   }
+
+handleLogin :: Maybe Text -> App (Html ())
+handleLogin cookies = do
+  let sessionToken =
+        SessionToken . decodeUtf8 <$> getCookie cookies "session-token"
+  userId <- join <$> traverse continue sessionToken
+  case userId of
+    Nothing -> return loginPage
+    Just userId -> loggedInPage <$> getUser userId
+
 
 --- apiProxy :: Proxy ChoreWheelApi
 --- apiProxy = Proxy

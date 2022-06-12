@@ -13,7 +13,7 @@ import Models
 
 insertPassword :: Statement (UserId, PasswordHash) ()
 insertPassword =
-  lmap (first unUserId . second unPasswordHash)
+  lmap (bimap unUserId unPasswordHash)
   [resultlessStatement|
     insert into password (user_id, password_hash)
     values ($1 :: int4, $2 :: text)|]
@@ -26,7 +26,7 @@ selectPassword =
 
 passwordInfoByUsername :: Statement Username (Maybe (UserId, PasswordHash))
 passwordInfoByUsername =
-  dimap unUsername (fmap (first UserId . second PasswordHash))
+  dimap unUsername (fmap (bimap UserId PasswordHash))
   [maybeStatement|
     select u.id :: int4, password_hash :: text
     from password p

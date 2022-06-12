@@ -26,8 +26,8 @@ data PostgresConfig = PostgresConfig
 parsePostgresConfig :: IO (Either String PostgresConfig)
 parsePostgresConfig =
   Env.parseOr pure (header "Postgresql Environment") $ PostgresConfig
-  <$> var (str <=< nonempty) "POSTGRES_USER"      (help "User")
-  <*> var (str <=< nonempty) "POSTGRES_PASSWORD"  (help "Password")
+  <$> var (str <=< nonempty) "POSTGRES_USER"      (help "User" <> def "user")
+  <*> var (str <=< nonempty) "POSTGRES_PASSWORD"  (help "Password" <> def "hunter2")
 
 makeConnStr :: PostgresConfig -> BS.ByteString
 makeConnStr PostgresConfig {..} =

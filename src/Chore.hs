@@ -3,7 +3,7 @@ module Chore where
 import Data.Time.Clock
 import Data.Time.Calendar
 --import Data.Time.Calendar.OrdinalDate
-import Data.Set (Set(..))
+import Data.Set (Set)
 
 --data Day = Mon | Tue | Wed | Thu | Fri | Sat | Sun deriving Eq
 
@@ -50,14 +50,6 @@ data ChoreState = ChoreState
   { firstScheduled :: Day
   , scheduled :: Schedule
   }
-
-scheduleStep :: Schedule -> Day -> Day
-scheduleStep (Weekly days) d =
-  head $ filter ((`elem` days) . dayOfWeek) [(succ d)..]
-scheduleStep (Repeat interval unit) d = case unit of
-  Day -> undefined
-  Month -> undefined
-  Year -> undefined
 
 data ChoreStatus' = ChoreStatus'
 

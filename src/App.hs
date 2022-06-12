@@ -11,7 +11,8 @@ import Servant.Server (ServerError)
 import Servant.Auth.Server (JWTSettings)
 import GHC.Generics
 
-import Effect.Auth
+import Effect.Auth.Jwt
+import Effect.Auth.Session
 import Effect.User
 
 data AppEnv = AppEnv
@@ -22,6 +23,7 @@ data AppEnv = AppEnv
 newtype App a = App (ReaderT AppEnv (ExceptT ServerError IO) a)
   deriving newtype (Functor, Applicative, Monad, MonadIO, MonadReader AppEnv, MonadError ServerError)
   deriving AuthM via (AuthT App)
+  deriving SessionAuthM via (SessionAuthT App)
   deriving UserM via (UserT App)
   --deriving MonadGetUsers via (GetUsersT App)
   --deriving MonadLog via (ConsoleLogT App)

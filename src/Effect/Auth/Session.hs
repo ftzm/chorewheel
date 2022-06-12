@@ -100,7 +100,7 @@ getCookieOrError req name = do
 
 authHandler :: SessionAuthM m => (forall a. m a -> Handler a) -> AuthHandler Request UserId
 authHandler f = mkAuthHandler $ \r ->
-  either throw401 handle (SessionToken <$> getCookieOrError r "session-cookie")
+  either throw401 handle (SessionToken <$> getCookieOrError r "session-token")
   where
     throw401 msg = throwError $ err401 {errBody = msg}
     handle = maybe (throw401 "Session cookie invalid") pure <=< f . continue
