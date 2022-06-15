@@ -22,7 +22,7 @@ import DB.User
 import Models
 
 import App
-import API.Root
+import Server.Root
 import DB
 
 createTestUser :: HP.Pool -> IO ()

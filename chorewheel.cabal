@@ -21,12 +21,7 @@ source-repository head
 
 library
   exposed-modules:
-      API.Auth
-      API.Frontend.Home
-      API.Frontend.Login
-      API.Root
-      API.User
-      API.Util
+      ApiUtil
       App
       Chore
       ChoreWheel
@@ -41,7 +36,16 @@ library
       Effect.User
       Log
       Models
+      Page.Attribute
+      Page.Common
+      Page.Home
+      Page.Landing
+      Page.Login
+      Routes.Root
+      Routes.SessionAuth
       ServantLucid
+      Server.Root
+      Server.SessionAuth
   other-modules:
       Paths_chorewheel
   hs-source-dirs:
@@ -141,12 +145,7 @@ test-suite spec
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
-      API.Auth
-      API.Frontend.Home
-      API.Frontend.Login
-      API.Root
-      API.User
-      API.Util
+      ApiUtil
       App
       Chore
       ChoreWheel
@@ -161,7 +160,16 @@ test-suite spec
       Effect.User
       Log
       Models
+      Page.Attribute
+      Page.Common
+      Page.Home
+      Page.Landing
+      Page.Login
+      Routes.Root
+      Routes.SessionAuth
       ServantLucid
+      Server.Root
+      Server.SessionAuth
       Paths_chorewheel
   hs-source-dirs:
       test

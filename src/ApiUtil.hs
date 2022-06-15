@@ -3,7 +3,7 @@
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE TypeOperators #-}
 
-module API.Util where
+module ApiUtil where
 
 import Data.ByteString
 import Data.Text
