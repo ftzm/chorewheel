@@ -1,36 +1,61 @@
 module Schedule where
 
+import Data.Time.Calendar (Day)
+
 import Schedule.Pattern
 
-data Schedule
-  -- ^ Schedule next task n days since the task was completed, even if late.
-  = FlexDays Int
-  -- ^ Schedule tasks n days apart.
-  | StrictDays Int
-  -- ^ Schedule tasks by a repeating pattern of weeks/months.
-  | Pattern Pattern
 
--- nextDayFromScheduleState :: ScheduleState -> ScheduleState
--- nextDayFromScheduleState s = case s of
---   FlexDayState i d -> FlexDayState i $ findNextFlexDay d i
---   StrictDayState i d -> StrictDayState i $ findNextStrictDay d i
---   WeeklyPatternState ps -> WeeklyPatternState $ weekPatternStateStep ps
---   MonthlyPatternState ps  -> MonthlyPatternState $ monthPatternStateStep ps
+-- | Schedule next task n days since the task was completed, even if late.
+newtype FlexDays = FlexDays { unFlexDays :: Int }
+newtype FlexDaysId = FlexDaysId {unFlexDaysId :: Int}
 
--- findNextFlexDay :: Day -> Int -> Day
--- findNextFlexDay = undefined
+-- | Schedule tasks n days apart.
+newtype StrictDays = StrictDays { unStrictDays :: Int }
+newtype StrictDaysId = StrictDaysId {unStrictDaysId :: Int}
 
--- findNextStrictDay :: Day -> Int -> Day
--- findNextStrictDay = undefined
+-- data Schedule
+--   = FlexDaysS FlexDays
+--   | StrictDaysS StrictDays
+--   -- ^ Schedule tasks by a repeating pattern of weeks/months.
+--   | PatternS PatternSchedule
 
--- Necessary operations
+-- data ScheduleState
+--   -- ^ Schedule next task n days since the task was completed, even if late.
+--   -- Next scheduled day not needed because we just count from the last
+--   -- completed day. If none, consider it scheduled for today.
+--   = FlexDaysSS FlexDays
+--   -- ^ Schedule tasks n days apart.
+--   -- Include the next scheduled day.
+--   | StrictDaysSS StrictDays Day
+--   -- ^ Schedule tasks by a repeating pattern of weeks/months.
+--   -- the included pattern state is the last scheduled day.
+--   | PatternStateSS PatternState
 
--- create schedule
--- show schedule
--- edit schedule
+data ScheduleStateUpdate
+  = StrictDaysU Day
+  | PatternStateU PatternPosition
 
--- set first schedule day
--- get all schedule days into the future
+-- It's not clear that I'll ever have use for a schedule alone withouth the
+-- state, as the state is essentially always relevant when creating or
+-- updating. It may make sense to only have a scheduleState-like type where the
+-- state is optional
 
--- non destructive schedule edits form schedules with past days associated
---
+nextDaysFlex :: FlexDays -> Day -> [Day]
+nextDaysFlex = undefined
+
+nextDaysStrict :: StrictDays -> Day -> [Day]
+nextDaysStrict = undefined
+
+-- updateNextScheduled :: ScheduleState -> Day -> ScheduleState
+-- updateNextScheduled = undefined
+
+create = undefined
+
+load = undefined
+
+-- the tricky thing here is to update the pattern state/scheduled days where relevant.
+update = undefined
+
+nextDays = undefined
+
+perform = undefined

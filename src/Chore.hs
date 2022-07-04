@@ -1,13 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE DuplicateRecordFields #-}
--- TypeNats experiment
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE RankNTypes #-}
 
 module Chore where
 
@@ -44,14 +37,6 @@ data ChoreStatus
   -- | The chore was not done on its scheduled day, and between that day and
   -- today the chore should have been scheduled n additional times.
   | Skipped Int
-
--- data ChoreState = ChoreState
---   -- | the first scheduled occurrence of this task. This represents either the
---   -- first scheduled instance of a task ever, or the first scheduled instance
---   -- of a task since after if was last completed.
---   { firstScheduled :: Day
---   , schedule :: Schedule
---   }
 
 newtype Scheduled = Scheduled { unScheduled :: Day}
 newtype Resolved = Resolved { unResolved :: Day}

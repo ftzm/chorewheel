@@ -37,7 +37,7 @@ withPool' :: Pool.Pool -> Session.Session a -> IO a
 withPool' p s = Pool.use p s >>= either (fail . show) return
 
 withPool :: Pool.Pool -> Session.Session a -> IO (Either Pool.UsageError a)
-withPool p s = Pool.use p s
+withPool p s = Pool.use
 
 -- transaction' connection transaction =
   -- session connection (TS.transaction TS.RepeatableRead TS.Write transaction)
@@ -63,7 +63,7 @@ createTestPool :: DB -> IO Pool.Pool
 createTestPool db = do
   let connStr = toConnectionString db
   pool <- Pool.acquire (10, 60, connStr)
-  migration <- readFile("migration/init.sql")
+  migration <- readFile "migration/init.sql"
   Pool.use pool $ Session.sql migration
   return pool
 
@@ -85,7 +85,6 @@ assertCompletes  = True @?= True
 unitTests :: SessionRunner -> TestTree
 unitTests runS = testGroup "Query Tests"
   [ testCase "Do the thing" $ False @?= False
-  , testCase "The other" $ return () >>= \x -> x @?= ()
   -- User
   , testCase "Insert user" $ do
       runS $ Session.statement (User "test" "test") insertUser
@@ -113,7 +112,7 @@ unitTests runS = testGroup "Query Tests"
       isJust result @?= True
   -- RefreshToken
   , testCase "Token round trip" $ do
-      expiry <- addUTCTime (fromInteger 3000) <$> liftIO getCurrentTime
+      expiry <- addUTCTime 3000 <$> liftIO getCurrentTime
       now <- liftIO getCurrentTime
       let token = "test_token"
       (originalId, dbUserId) <- runS $ do
@@ -122,6 +121,10 @@ unitTests runS = testGroup "Query Tests"
         Session.statement (originalId, token, expiry) upsertToken --update
         dbUserId <- Session.statement (token, now) selectToken
         Session.statement originalId deleteToken
-        return $ (originalId, dbUserId)
+        return (originalId, dbUserId)
       originalId @?= fromJust dbUserId
   ]
+
+patternTests :: TestTree
+patternTests = testGroup "Pattern Tests"
+  [  testCase "" ]
