@@ -47,57 +47,84 @@ CREATE TABLE IF NOT EXISTS chore_instance (
 -------------------------------------------------------------------------------
 -- Schedule
 
-CREATE TYPE IF NOT EXISTS animal_constr AS ENUM (
-  'cat',
-  'bird',
-  'dog'
+CREATE TYPE IF NOT EXISTS schedule_constr AS ENUM (
+  'strict_days',
+  'flex_days',
+  'weekly_pattern',
+  'monthly_pattern'
 );
 
-CREATE TABLE IF NOT EXISTS animal (
+CREATE TABLE IF NOT EXISTS schedule (
   id    SERIAL          NOT NULL,
-  type  animal_constr   NOT NULL,
+  user_id INT NOT NULL,
+  type  schedule_constr   NOT NULL,
 
-  PRIMARY KEY (id, type)
+  PRIMARY KEY (id, type),
+  FOREIGN KEY (user_id) REFERENCES "user"
 );
 
+CREATE TABLE IF NOT EXISTS flex_days (
+  id INTEGER PRIMARY KEY,
+  type
+      schedule_constr NOT NULL
+      DEFAULT 'flex_days'
+      CHECK (type = 'flex_days'),
+  days INT NOT NULL
+  FOREIGN KEY (id, type) REFERENCES schedule (id, type)
+);
 
-CREATE TABLE IF NOT EXISTS weekly_pattern_schedule (
-  id SERIAL PRIMARY KEY,
-  user_id INT PRIMARY KEY REFERENCES "user",
-  iterations INT NOT NULL
+CREATE TABLE IF NOT EXISTS strict_days (
+  id INTEGER PRIMARY KEY,
+  type
+      schedule_constr NOT NULL
+      DEFAULT 'strict_days'
+      CHECK (type = 'strict_days'),
+  days INT NOT NULL
+  scheduled DATE,
+  FOREIGN KEY (id, type) REFERENCES schedule (id, type)
+);
+
+CREATE TABLE IF NOT EXISTS weekly_pattern (
+  id INTEGER PRIMARY KEY,
+  type
+      schedule_constr NOT NULL
+      DEFAULT 'weekly_pattern'
+      CHECK (type = 'weekly_pattern'),
+  iterations INT NOT NULL,
+  scheduled DATE,
+  FOREIGN KEY (id, type) REFERENCES schedule (id, type)
 );
 
 CREATE TABLE IF NOT EXISTS weekly_pattern_schedule_elem (
   id SERIAL PRIMARY KEY,
-  weekly_pattern_schedule INT NOT NULL REFERENCES weekly_pattern_schedule,
+  weekly_pattern INT NOT NULL REFERENCES weekly_pattern_schedule,
   iteration INT NOT NULL,
   point INT NOT NULL
 );
 
-CREATE UNIQUE INDEX weekly_pattern_schedule_elem_iteration_point_uq
-  ON weekly_pattern_schedule UNIQUE(weekly_schedule_pattern, iteration, point);
+CREATE UNIQUE INDEX weekly_pattern_elem_uq
+  ON weekly_pattern_schedule UNIQUE(weekly_pattern, iteration, point);
 
-CREATE TABLE IF NOT EXISTS monthly_pattern_schedule (
-  id SERIAL PRIMARY KEY,
-  user_id INT PRIMARY KEY REFERENCES "user",
-  iterations INT NOT NULL
+CREATE TABLE IF NOT EXISTS monthly_pattern (
+  id INTEGER PRIMARY KEY,
+  type
+      schedule_constr NOT NULL
+      DEFAULT 'monthly_pattern'
+      CHECK (type = 'monthly_pattern'),
+  iterations INT NOT NULL,
+  scheduled DATE,
+  FOREIGN KEY (id, type) REFERENCES schedule (id, type)
 );
 
 CREATE TABLE IF NOT EXISTS monthly_pattern_schedule_elem (
   id SERIAL PRIMARY KEY,
-  monthly_pattern_schedule INT NOT NULL REFERENCES monthly_pattern_schedule,
+  monthly_pattern INT NOT NULL REFERENCES monthly_pattern_schedule,
   iteration INT NOT NULL,
   point INT NOT NULL
 );
 
-CREATE UNIQUE INDEX monthly_pattern_schedule_elem_iteration_point_uq
-  ON monthly_pattern_schedule UNIQUE(monthly_schedule_pattern, iteration, point);
-
-CREATE TABLE IF NOT EXISTS pattern_schedule_position (
-  id SERIAL PRIMARY KEY,
-  user_id INT PRIMARY KEY REFERENCES "user",
-  iterations INT NOT NULL
-);
+CREATE UNIQUE INDEX monthly_pattern_elem_uq
+  ON monthly_pattern_schedule UNIQUE(monthly_pattern, iteration, point);
 
 
 -------------------------------------------------------------------------------
