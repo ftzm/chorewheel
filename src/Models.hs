@@ -65,3 +65,7 @@ newtype Jwt = Jwt { unJwt :: ByteString } deriving Show
 newtype Password = Password { unPassword :: ByteString } deriving (Show, Eq)
 
 newtype PasswordHash = PasswordHash { unPasswordHash :: Text } deriving (Show, Eq)
+
+newtype Household  = Household { unHousehold :: Text } deriving (Show, Eq)
+
+newtype HouseholdId  = HouseholdId { unHouseholdId :: Int32 } deriving (Show, Eq)

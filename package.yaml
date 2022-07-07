@@ -44,6 +44,7 @@ dependencies:
 - exceptions
 - word8
 - memory
+- contravariant-extras
 #- optics
 - hasql
 - hasql-th
@@ -52,6 +53,7 @@ dependencies:
 - profunctors
 - utf8-string
 - containers
+- vector
 # For Tests
 - tasty
 - tasty-hunit

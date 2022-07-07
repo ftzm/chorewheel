@@ -6,6 +6,8 @@ module Chore where
 
 import Data.Time.Clock
 import Data.Time.Calendar
+import Data.Text
+import Data.Int (Int32)
 
 -------------------------------------------------------------------------------
 -- | Represents a period of time. The first date is guaranteed to be before the
@@ -17,26 +19,28 @@ data Resolution
   | Cancelled UTCTime
   | Rescheduled UTCTime
 
+newtype ChoreId = ChoreId { unChoreId :: Int32}
+
+data Chore = Chore
+  { _name :: Text
+  } deriving (Eq, Show)
+
 data ChoreEvent
   -- | Complete a task
   = Complete UTCTime
-  -- | Cancel a task. Has the same effect as completing the task in that the
+  -- | Skip a task. Has the same effect as completing the task in that the
   -- task is subsequently scheduled for the next logical day, but makes the
   -- distinction that the task was not actually completed.
-  | Cancel UTCTime
-  -- | Apply a pause period to a task. This has the effect of moving an
-  -- existing or newly scheduled task to after the pause period has ended.
-  | Pause Period
+  | Skip UTCTime
 
 data ChoreStatus
+  -- | the chore is scheduled some time in the future.
+  = NotDue
   -- | the chore is scheduled for today
-  = Due
-  -- | the chore is scheduled for before today, but the next logical
-  -- occurrence is after today
-  | Overdue
-  -- | The chore was not done on its scheduled day, and between that day and
+  | Due
+  -- | the chore was scheduled for before today, and between that day and
   -- today the chore should have been scheduled n additional times.
-  | Skipped Int
+  | Overdue Int
 
 newtype Scheduled = Scheduled { unScheduled :: Day}
 newtype Resolved = Resolved { unResolved :: Day}

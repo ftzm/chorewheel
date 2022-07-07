@@ -19,7 +19,7 @@ safeToEnum i
 mkWeekday :: Int -> Maybe Weekday
 mkWeekday = safeToEnum
 
-newtype DayOfMonth = DayOfMonth {unDayOfMonth :: Int} deriving Eq
+newtype DayOfMonth = DayOfMonth {unDayOfMonth :: Int} deriving (Eq, Ord, Show)
 
 mkDayOfMonth :: Int -> Maybe DayOfMonth
 mkDayOfMonth i | i > 31 = Nothing

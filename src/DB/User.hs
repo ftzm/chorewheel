@@ -23,7 +23,7 @@ insertUser =
 
 selectUser :: Statement UserId User
 selectUser =
-  dimap unUserId (\(x, y) -> User x y)
+  dimap unUserId (uncurry User)
   [singletonStatement|
     select name :: text, email :: text from "user" where id = $1 :: int4|]
 
