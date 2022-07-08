@@ -47,7 +47,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS household_member_id
 
 CREATE TABLE IF NOT EXISTS chore (
   id SERIAL PRIMARY KEY,
-  household_id INT NOT NULL REFERENCES household,
+  household_id INT NOT NULL REFERENCES household ON DELETE CASCADE,
   name TEXT NOT NULL
 );
 
@@ -91,7 +91,7 @@ CREATE TABLE IF NOT EXISTS flex_days (
       DEFAULT 'flex_days'
       CHECK (type = 'flex_days'),
   days INT NOT NULL,
-  FOREIGN KEY (id, type) REFERENCES schedule (id, type)
+  FOREIGN KEY (id, type) REFERENCES schedule (id, type) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS strict_days (
@@ -102,7 +102,7 @@ CREATE TABLE IF NOT EXISTS strict_days (
       CHECK (type = 'strict_days'),
   days INT NOT NULL,
   scheduled DATE,
-  FOREIGN KEY (id, type) REFERENCES schedule (id, type)
+  FOREIGN KEY (id, type) REFERENCES schedule (id, type) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS weekly_pattern (
@@ -112,13 +112,15 @@ CREATE TABLE IF NOT EXISTS weekly_pattern (
       DEFAULT 'weekly_pattern'
       CHECK (type = 'weekly_pattern'),
   iterations INT NOT NULL,
+  --elem_index INT NOT NULL,
+  elem_index INT,
   scheduled DATE,
-  FOREIGN KEY (id, type) REFERENCES schedule (id, type)
+  FOREIGN KEY (id, type) REFERENCES schedule (id, type) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS weekly_pattern_elem (
   --id SERIAL PRIMARY KEY,
-  weekly_pattern_id INT NOT NULL REFERENCES weekly_pattern,
+  weekly_pattern_id INT NOT NULL REFERENCES weekly_pattern ON DELETE CASCADE,
   iteration INT NOT NULL,
   point INT NOT NULL
 );
@@ -132,13 +134,15 @@ CREATE TABLE IF NOT EXISTS monthly_pattern (
   DEFAULT 'monthly_pattern'
   CHECK (type = 'monthly_pattern'),
   iterations INT NOT NULL,
+  --elem_index INT NOT NULL,
+  elem_index INT,
   scheduled DATE,
   FOREIGN KEY (id, type) REFERENCES schedule (id, type)
 );
 
 CREATE TABLE IF NOT EXISTS monthly_pattern_elem (
   id SERIAL PRIMARY KEY,
-  monthly_pattern_id INT NOT NULL REFERENCES monthly_pattern,
+  monthly_pattern_id INT NOT NULL REFERENCES monthly_pattern ON DELETE CASCADE,
   iteration INT NOT NULL,
   point INT NOT NULL
 );

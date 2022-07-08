@@ -205,4 +205,6 @@ getSchedule =
     decoder _ = error "impossible due to DB constraints"
 
 deleteSchedule :: Statement ScheduleId ()
-deleteSchedule = undefined
+deleteSchedule =
+  lmap unScheduleId
+  [resultlessStatement| delete from schedule where id = $1 :: int4|]

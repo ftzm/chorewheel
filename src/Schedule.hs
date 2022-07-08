@@ -31,8 +31,8 @@ data ScheduleState
   | StrictDaysSS StrictDays Day
   -- ^ Schedule tasks by a repeating pattern of weeks/months.
   -- the included pattern state is the last scheduled day.
-  | WeeklyPatternStateS WeeklyPatternState
-  | MonthlyPatternStateS MonthlyPatternState
+  | WeeklyPatternSS WeeklyPatternState
+  | MonthlyPatternSS MonthlyPatternState
 
 -- data ScheduleStateUpdate
 --   = FlexDaysU Day

@@ -19,7 +19,7 @@ import Data.ByteString(readFile)
 import Control.Monad.Error.Class
 import Data.Time.Clock
 import Control.Monad.IO.Class
-import Data.Vector hiding (map)
+import qualified Data.Vector as V
 import qualified Data.Set as Set
 
 
@@ -132,7 +132,7 @@ queryTests runS = testGroup "Query Tests"
       householdId <- Session.statement (Household "home") insertHousehold
       Session.statement (householdId, userId') insertHouseholdMember
       result <- Session.statement userId' getUserHouseholds
-      liftIO $ Data.Vector.head result @?= (householdId, Household "home")
+      liftIO $ V.head result @?= (householdId, Household "home")
       liftIO assertCompletes
   -- Chore
   , testCase "Chore rounde trip" $ runS $ do
@@ -142,7 +142,7 @@ queryTests runS = testGroup "Query Tests"
       Session.statement (householdId, Chore "sweep") insertChore
       Session.statement (householdId, Chore "vacuum") insertChore
       chores <- Session.statement householdId householdChores
-      liftIO $ map snd (toList chores) @?= [Chore "sweep", Chore "vacuum"]
+      liftIO $ map snd (V.toList chores) @?= [Chore "sweep", Chore "vacuum"]
   -- Schedule
   , testCase "Schedule round trip" $ runS $ do
       userId' <- Session.statement (User "test" "test") insertUser
@@ -164,6 +164,13 @@ queryTests runS = testGroup "Query Tests"
       output2 <- Session.statement scheduleId2 getSchedule
       output3 <- Session.statement scheduleId3 getSchedule
       output4 <- Session.statement scheduleId4 getSchedule
+
+
+      allOutput <- Session.statement householdId getFullChoresByHousehold
+
+      Session.statement scheduleId1 deleteSchedule
+
+      liftIO $ V.length allOutput @?= 4
       liftIO $ flexdays @?= output1
       liftIO $ strict @?= output2
       liftIO $ weekly @?= output3
