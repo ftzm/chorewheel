@@ -67,3 +67,7 @@ newtype Password = Password { unPassword :: ByteString } deriving (Show, Eq)
 newtype PasswordHash = PasswordHash { unPasswordHash :: Text } deriving (Show, Eq)
 
 newtype SessionToken = SessionToken { unSessionToken :: Text } deriving (Show, Eq)
+
+newtype Household  = Household { unHousehold :: Text } deriving (Show, Eq)
+
+newtype HouseholdId  = HouseholdId { unHouseholdId :: Int32 } deriving (Show, Eq)

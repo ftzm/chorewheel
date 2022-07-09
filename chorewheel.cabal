@@ -26,9 +26,12 @@ library
       Chore
       ChoreWheel
       DB
+      DB.Chore
+      DB.Household
       DB.Password
       DB.RefreshToken
       DB.Session
+      DB.Schedule
       DB.User
       Effect.Auth.Jwt
       Effect.Auth.Password
@@ -46,6 +49,9 @@ library
       ServantLucid
       Server.Root
       Server.SessionAuth
+      Schedule
+      Schedule.Pattern
+      Schedule.Primitives
   other-modules:
       Paths_chorewheel
   hs-source-dirs:
@@ -57,6 +63,7 @@ library
     , base64-bytestring
     , bytestring
     , containers
+    , contravariant-extras
     , cookie
     , cryptonite
     , envparse
@@ -75,6 +82,7 @@ library
     , mtl
     , process
     , profunctors
+    , raw-strings-qq
     , resource-pool
     , servant >=0.19
     , servant-auth-server
@@ -86,8 +94,10 @@ library
     , time
     , tmp-postgres
     , transformers
+    , tuple
     , utf8-string
     , wai
+    , vector
     , warp
     , word8
   default-language: Haskell2010
@@ -106,6 +116,7 @@ executable chorewheel-exe
     , bytestring
     , chorewheel
     , containers
+    , contravariant-extras
     , cookie
     , cryptonite
     , envparse
@@ -124,6 +135,7 @@ executable chorewheel-exe
     , mtl
     , process
     , profunctors
+    , raw-strings-qq
     , resource-pool
     , servant >=0.19
     , servant-auth-server
@@ -135,8 +147,10 @@ executable chorewheel-exe
     , time
     , tmp-postgres
     , transformers
+    , tuple
     , utf8-string
     , wai
+    , vector
     , warp
     , word8
   default-language: Haskell2010
@@ -150,9 +164,12 @@ test-suite spec
       Chore
       ChoreWheel
       DB
+      DB.Chore
+      DB.Household
       DB.Password
       DB.RefreshToken
       DB.Session
+      DB.Schedule
       DB.User
       Effect.Auth.Jwt
       Effect.Auth.Password
@@ -170,6 +187,9 @@ test-suite spec
       ServantLucid
       Server.Root
       Server.SessionAuth
+      Schedule
+      Schedule.Pattern
+      Schedule.Primitives
       Paths_chorewheel
   hs-source-dirs:
       test
@@ -181,6 +201,7 @@ test-suite spec
     , base64-bytestring
     , bytestring
     , containers
+    , contravariant-extras
     , cookie
     , cryptonite
     , envparse
@@ -199,6 +220,7 @@ test-suite spec
     , mtl
     , process
     , profunctors
+    , raw-strings-qq
     , resource-pool
     , servant >=0.19
     , servant-auth-server
@@ -210,8 +232,10 @@ test-suite spec
     , time
     , tmp-postgres
     , transformers
+    , tuple
     , utf8-string
     , wai
+    , vector
     , warp
     , word8
   default-language: Haskell2010

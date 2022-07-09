@@ -21,14 +21,23 @@ import Data.Time.Clock
 import Control.Monad.IO.Class
 import Control.Monad.Reader
 import Control.Monad.Identity
+import qualified Data.Vector as V
+import qualified Data.Set as Set
 
 
 import Models
+import Chore
+import Schedule
+import Schedule.Pattern
+import Schedule.Primitives
 import DB.User
 import DB.Password
-import DB.RefreshToken as Ref
+import qualified DB.RefreshToken as Ref
 import DB.Session as Sesh
 import Effect.Auth.Session
+import DB.Household
+import DB.Chore
+import DB.Schedule
 
 -------------------------------------------------------------------------------
 -- Test utils
@@ -36,6 +45,10 @@ import Effect.Auth.Session
 -- session c s =
   -- Session.run s c >>=
   -- either (fail . show) return
+
+fromRight :: Either a b -> b
+fromRight (Right a) = a
+fromRight (Left _)  = error "unexpected Left"
 
 withPool' :: Pool.Pool -> Session.Session a -> IO a
 withPool' p s = Pool.use p s >>= either (fail . show) return
@@ -103,45 +116,39 @@ unitTests runS pool = testGroup "Query Tests"
   , testCase "Insert user" $ do
       runS $ Session.statement (User "test" "test") insertUser
       assertCompletes
-  , testCase "Select user" $ do
-      runS $ do
-        newId <- Session.statement (User "test" "test") insertUser
-        Session.statement newId selectUser
-      --("at" :: String) @?= "no"
-      assertCompletes
+  , testCase "Select user" $ runS $ do
+      newId <- Session.statement (User "test" "test") insertUser
+      Session.statement newId selectUser
+      liftIO assertCompletes
   -- Password
-  , testCase "Password round trip id" $ do
+  , testCase "Password round trip id" $ runS $ do
       let pw = PasswordHash "test_password"
-      dbPw <- runS $ do
-        newId <- Session.statement (User "test" "test") insertUser
-        Session.statement (newId, pw) insertPassword
-        Session.statement newId selectPassword
-      pw @?= dbPw
-  , testCase "Password round trip username" $ do
+      newId <- Session.statement (User "test" "test") insertUser
+      Session.statement (newId, pw) insertPassword
+      dbPw <- Session.statement newId selectPassword
+      liftIO $ pw @?= dbPw
+  , testCase "Password round trip username" $ runS $ do
       let pw = PasswordHash "test_password"
-      result <- runS $ do
-        newId <- Session.statement (User "test" "test") insertUser
-        Session.statement (newId, pw) insertPassword
-        Session.statement (Username "test") passwordInfoByUsername
-      isJust result @?= True
+      newId <- Session.statement (User "test" "test") insertUser
+      Session.statement (newId, pw) insertPassword
+      result <- Session.statement (Username "test") passwordInfoByUsername
+      liftIO $ isJust result @?= True
   -- RefreshToken
-  , testCase "Token round trip" $ do
+  , testCase "Token round trip" $ runS $ do
       expiry <- addUTCTime 3000 <$> liftIO getCurrentTime
       now <- liftIO getCurrentTime
       let token = "test_token"
-      (originalId, dbUserId) <- runS $ do
-        originalId <- Session.statement (User "test" "test") insertUser
-        Session.statement (originalId, token, expiry) Ref.upsertToken
-        Session.statement (originalId, token, expiry) Ref.upsertToken --update
-        dbUserId <- Session.statement (token, now) selectToken
-        Session.statement originalId Ref.deleteToken
-        return (originalId, dbUserId)
-      originalId @?= fromJust dbUserId
+      originalId <- Session.statement (User "test" "test") insertUser
+      Session.statement (originalId, token, expiry) Ref.upsertToken
+      Session.statement (originalId, token, expiry) Ref.upsertToken --update
+      dbUserId <- Session.statement (token, now) Ref.selectToken
+      Session.statement originalId Ref.deleteToken
+      liftIO $ originalId @?= fromJust dbUserId
   -- Session
   , testCase "Continue session fails when no session" $ do
       let pw = PasswordHash "test_password"
       Pool.use pool $ Session.sql "BEGIN"
-      result <- runReaderT (continueSessionImpl "missingToken") pool
+      result <- runReaderT (continueSessionImpl $ SessionToken "missingToken") pool
       Pool.use pool $ Session.sql "ROLLBACK"
       result @?= Nothing
   , testCase "Continue session finds user by token" $ do
@@ -166,4 +173,60 @@ unitTests runS pool = testGroup "Query Tests"
       Pool.use pool $ Session.sql "ROLLBACK"
       isJust userId @?= True
       endResult @?= Nothing
+  -- Household
+  , testCase "Insert household, membership, and get" $ runS $ do
+      userId' <- Session.statement (User "test" "test") insertUser
+      householdId <- Session.statement (Household "home") insertHousehold
+      Session.statement (householdId, userId') insertHouseholdMember
+      result <- Session.statement userId' getUserHouseholds
+      liftIO $ V.head result @?= (householdId, Household "home")
+      liftIO assertCompletes
+  -- Chore
+  , testCase "Chore rounde trip" $ runS $ do
+      Session.statement (User "test" "test") insertUser
+      householdId <- Session.statement (Household "home") insertHousehold
+      --Session.statement (householdId, userId') insertHouseholdMember
+      Session.statement (householdId, Chore "sweep") insertChore
+      Session.statement (householdId, Chore "vacuum") insertChore
+      chores <- Session.statement householdId householdChores
+      liftIO $ map snd (V.toList chores) @?= [Chore "sweep", Chore "vacuum"]
+  -- Schedule
+  , testCase "Chore+Schedule round trip" $ runS $ do
+      userId' <- Session.statement (User "test" "test") insertUser
+      householdId <- Session.statement (Household "home") insertHousehold
+      Session.statement (householdId, userId') insertHouseholdMember
+      choreId1 <- Session.statement (householdId, Chore "sweep") insertChore
+      choreId2 <- Session.statement (householdId, Chore "vacuum") insertChore
+      choreId3 <- Session.statement (householdId, Chore "dust") insertChore
+      choreId4 <- Session.statement (householdId, Chore "windows") insertChore
+      today <- utctDay <$> liftIO getCurrentTime
+      let flexdays = FlexDaysSS $ FlexDaysState (FlexDays 2) today
+      let strict = StrictDaysSS $ StrictDaysState (StrictDays 2) today
+      let weeklyPattern = Pattern (Set.fromList [(1, Mon), (2, Tue)]) 2
+      let weekly = WeeklyPatternSS $ fromRight $ nextEligibleDayWeekly weeklyPattern 1 today
+      let monthlyPattern = Pattern (Set.fromList [(1, DayOfMonth 10), (2, DayOfMonth 20)]) 2
+      let monthly = MonthlyPatternSS $ fromRight $ nextEligibleDayMonthly monthlyPattern 1 today
+      scheduleId1 <- insertSchedule (choreId1, flexdays)
+      scheduleId2 <- insertSchedule (choreId2, strict)
+      scheduleId3 <- insertSchedule (choreId3, weekly)
+      scheduleId4 <- insertSchedule (choreId4, monthly)
+      output1 <- Session.statement scheduleId1 getSchedule
+      output2 <- Session.statement scheduleId2 getSchedule
+      output3 <- Session.statement scheduleId3 getSchedule
+      output4 <- Session.statement scheduleId4 getSchedule
+
+      allOutput <- Session.statement householdId getFullChoresByHousehold
+      liftIO $ print allOutput
+      liftIO $ V.length allOutput @?= 4
+
+      Session.statement scheduleId1 deleteSchedule
+
+      liftIO $ FlexDaysS (FlexDays 2) @?= output1
+      liftIO $ StrictDaysS (StrictDays 2) @?= output2
+      liftIO $ WeeklyPatternS weeklyPattern @?= output3
+      liftIO $ MonthlyPatternS monthlyPattern @?= output4
   ]
+
+-- patternTests :: TestTree
+-- patternTests = testGroup "Pattern Tests"
+--   [  testCase "" ]

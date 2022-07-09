@@ -48,6 +48,9 @@ dependencies:
 - servant-lucid
 - wai
 - http-api-data
+- contravariant-extras
+- raw-strings-qq
+- tuple
 #- optics
 - hasql
 - hasql-th
@@ -57,6 +60,7 @@ dependencies:
 - utf8-string
 - containers
 - http-media
+- vector
 # For Tests
 - tasty
 - tasty-hunit
@@ -64,8 +68,9 @@ dependencies:
 - process
 
 ghc-options:
-  # - -Wall
-  # - -Werror
+  - -Wall
+  - -Werror
+  - -Wwarn=missing-home-modules
   - -Wno-unused-do-bind
   - -Wno-missing-home-modules
   - -Wno-type-defaults

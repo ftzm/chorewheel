@@ -12,6 +12,7 @@
             [
               haskell.compiler."ghc${ghcVersion}"
               cabal-install
+              hpack
               hlint
               hpack
               ghcid
