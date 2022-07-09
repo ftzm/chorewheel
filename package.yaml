@@ -45,6 +45,8 @@ dependencies:
 - word8
 - memory
 - contravariant-extras
+- raw-strings-qq
+- tuple
 #- optics
 - hasql
 - hasql-th

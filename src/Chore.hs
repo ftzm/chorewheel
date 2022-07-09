@@ -19,7 +19,7 @@ data Resolution
   | Cancelled UTCTime
   | Rescheduled UTCTime
 
-newtype ChoreId = ChoreId { unChoreId :: Int32}
+newtype ChoreId = ChoreId { unChoreId :: Int32} deriving (Eq, Show)
 
 data Chore = Chore
   { _name :: Text

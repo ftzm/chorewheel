@@ -91,6 +91,7 @@ CREATE TABLE IF NOT EXISTS flex_days (
       DEFAULT 'flex_days'
       CHECK (type = 'flex_days'),
   days INT NOT NULL,
+  scheduled DATE,
   FOREIGN KEY (id, type) REFERENCES schedule (id, type) ON DELETE CASCADE
 );
 

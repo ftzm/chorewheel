@@ -21,18 +21,24 @@ data Schedule
    | MonthlyPatternS MonthlyPattern
    deriving (Eq, Show)
 
+data FlexDaysState = FlexDaysState FlexDays Day
+   deriving (Eq, Show)
+data StrictDaysState = StrictDaysState StrictDays Day
+   deriving (Eq, Show)
+
 data ScheduleState
   -- ^ Schedule next task n days since the task was completed, even if late.
   -- Next scheduled day not needed because we just count from the last
   -- completed day. If none, consider it scheduled for today.
-  = FlexDaysSS FlexDays
+  = FlexDaysSS FlexDaysState
   -- ^ Schedule tasks n days apart.
   -- Include the next scheduled day.
-  | StrictDaysSS StrictDays Day
+  | StrictDaysSS StrictDaysState
   -- ^ Schedule tasks by a repeating pattern of weeks/months.
   -- the included pattern state is the last scheduled day.
   | WeeklyPatternSS WeeklyPatternState
   | MonthlyPatternSS MonthlyPatternState
+   deriving (Eq, Show)
 
 -- data ScheduleStateUpdate
 --   = FlexDaysU Day

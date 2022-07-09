@@ -26,7 +26,8 @@ import Schedule
 import Schedule.Pattern
 import Schedule.Primitives
 
-insertConstructor :: Statement (ChoreId, Schedule) ScheduleId
+
+insertConstructor :: Statement (ChoreId, ScheduleState) ScheduleId
 insertConstructor =
   dimap
     (bimap unChoreId toName)
@@ -37,34 +38,36 @@ insertConstructor =
     returning id :: int4 |]
   where
     toName = \case
-      FlexDaysS _ -> "flex_days"
-      StrictDaysS _ -> "strict_days"
-      WeeklyPatternS _ -> "weekly_pattern"
-      MonthlyPatternS _ -> "monthly_pattern"
+      FlexDaysSS _ -> "flex_days"
+      StrictDaysSS _ -> "strict_days"
+      WeeklyPatternSS _ -> "weekly_pattern"
+      MonthlyPatternSS _ -> "monthly_pattern"
 
-insertFlexDays :: Statement (ScheduleId, FlexDays) ()
+insertFlexDays :: Statement (ScheduleId, FlexDaysState) ()
 insertFlexDays =
   lmap
-    (bimap unScheduleId (fromIntegral . unFlexDays))
+    (\(ScheduleId i, FlexDaysState (FlexDays n) d) -> (i, fromIntegral n, d))
     [resultlessStatement|
-    insert into flex_days (id, days)
-    values ($1 :: int4, $2 :: int4) |]
+    insert into flex_days (id, days, scheduled)
+    values ($1 :: int4, $2 :: int4, $3 :: date) |]
 
-insertStrictDays :: Statement (ScheduleId, StrictDays) ()
+insertStrictDays :: Statement (ScheduleId, StrictDaysState) ()
 insertStrictDays =
   lmap
-    (bimap unScheduleId (fromIntegral . unStrictDays))
+    (\(ScheduleId i, StrictDaysState (StrictDays n) d) -> (i, fromIntegral n, d))
     [resultlessStatement|
-    insert into strict_days (id, days)
-    values ($1 :: int4, $2 :: int4) |]
+    insert into strict_days (id, days, scheduled)
+    values ($1 :: int4, $2 :: int4, $3 :: date) |]
 
-insertWeeklyPatternMain :: Statement (ScheduleId, WeeklyPattern) ()
+insertWeeklyPatternMain :: Statement (ScheduleId, WeeklyPatternState) ()
 insertWeeklyPatternMain =
   lmap
-    (bimap unScheduleId (fromIntegral . _iterations))
+    (\( ScheduleId i
+      , PatternState (Pattern {_iterations}) (PatternPosition {_day, _index})
+      ) -> (i, fromIntegral _iterations, fromIntegral _index, _day))
     [resultlessStatement|
-    insert into weekly_pattern (id, iterations)
-    values ($1 :: int4, $2 :: int4) |]
+    insert into weekly_pattern (id, iterations, elem_index, scheduled)
+    values ($1 :: int4, $2 :: int4, $3 :: int4, $4 :: date) |]
 
 insertWeeklyPatternElems :: Statement (V.Vector (ScheduleId, Int, Weekday)) ()
 insertWeeklyPatternElems = Statement sql encoder Decoders.noResult True
@@ -84,21 +87,23 @@ insertWeeklyPatternElems = Statement sql encoder Decoders.noResult True
       (vector $ fromIntegral >$< Encoders.int4)
       (vector $ fromIntegral . fromEnum >$< Encoders.int4)
 
-insertWeeklyPattern :: (ScheduleId, WeeklyPattern) -> Session.Session ()
-insertWeeklyPattern args@(s, Pattern {_elems}) = do
+insertWeeklyPattern :: (ScheduleId, WeeklyPatternState) -> Session.Session ()
+insertWeeklyPattern args@(s, PatternState Pattern {_elems} _) = do
   Session.statement args insertWeeklyPatternMain
   flip Session.statement insertWeeklyPatternElems
     $ V.fromList
     $ map (\(i, d) -> (s, i, d))
     $ Set.toList _elems
 
-insertMonthlyPatternMain :: Statement (ScheduleId, MonthlyPattern) ()
+insertMonthlyPatternMain :: Statement (ScheduleId, MonthlyPatternState) ()
 insertMonthlyPatternMain =
   lmap
-    (bimap unScheduleId (fromIntegral . _iterations))
+    (\( ScheduleId i
+      , PatternState (Pattern {_iterations}) (PatternPosition {_day, _index})
+      ) -> (i, fromIntegral _iterations, fromIntegral _index, _day))
     [resultlessStatement|
-    insert into monthly_pattern (id, iterations)
-    values ($1 :: int4, $2 :: int4) |]
+    insert into monthly_pattern (id, iterations, elem_index, scheduled)
+    values ($1 :: int4, $2 :: int4, $3 :: int4, $4 :: date) |]
 
 insertMonthlyPatternElems
   :: Statement (V.Vector (ScheduleId, Int, DayOfMonth)) ()
@@ -119,22 +124,22 @@ insertMonthlyPatternElems = Statement sql encoder Decoders.noResult True
       (vector $ fromIntegral >$< Encoders.int4)
       (vector $ fromIntegral . unDayOfMonth >$< Encoders.int4)
 
-insertMonthlyPattern :: (ScheduleId, MonthlyPattern) -> Session.Session ()
-insertMonthlyPattern args@(s, Pattern {_elems}) = do
+insertMonthlyPattern :: (ScheduleId, MonthlyPatternState) -> Session.Session ()
+insertMonthlyPattern args@(s, PatternState Pattern {_elems} _) = do
   Session.statement args insertMonthlyPatternMain
   flip Session.statement insertMonthlyPatternElems
     $ V.fromList
     $ map (\(i, d) -> (s, i, d))
     $ Set.toList _elems
 
-insertSchedule :: (ChoreId, Schedule) -> Session.Session ScheduleId
+insertSchedule :: (ChoreId, ScheduleState) -> Session.Session ScheduleId
 insertSchedule args@(_, s) = do
   scheduleId <- Session.statement args insertConstructor
   case s of
-    FlexDaysS x -> Session.statement (scheduleId, x) insertFlexDays
-    StrictDaysS x -> Session.statement (scheduleId, x) insertStrictDays
-    WeeklyPatternS x -> insertWeeklyPattern (scheduleId, x)
-    MonthlyPatternS x -> insertMonthlyPattern (scheduleId, x)
+    FlexDaysSS x -> Session.statement (scheduleId, x) insertFlexDays
+    StrictDaysSS x -> Session.statement (scheduleId, x) insertStrictDays
+    WeeklyPatternSS x -> insertWeeklyPattern (scheduleId, x)
+    MonthlyPatternSS x -> insertMonthlyPattern (scheduleId, x)
   return scheduleId
 
 getSchedule :: Statement ScheduleId Schedule

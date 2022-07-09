@@ -42,6 +42,10 @@ import DB.Schedule
   -- Session.run s c >>=
   -- either (fail . show) return
 
+fromRight :: Either a b -> b
+fromRight (Right a) = a
+fromRight (Left _)  = error "unexpected Left"
+
 withPool' :: Pool.Pool -> Session.Session a -> IO a
 withPool' p s = Pool.use p s >>= either (fail . show) return
 
@@ -90,6 +94,7 @@ tests runS = testGroup "Tests" [queryTests runS]
 
 assertCompletes :: Assertion
 assertCompletes  = True @?= True
+
 
 queryTests :: SessionRunner -> TestTree
 queryTests runS = testGroup "Query Tests"
@@ -144,7 +149,7 @@ queryTests runS = testGroup "Query Tests"
       chores <- Session.statement householdId householdChores
       liftIO $ map snd (V.toList chores) @?= [Chore "sweep", Chore "vacuum"]
   -- Schedule
-  , testCase "Schedule round trip" $ runS $ do
+  , testCase "Chore+Schedule round trip" $ runS $ do
       userId' <- Session.statement (User "test" "test") insertUser
       householdId <- Session.statement (Household "home") insertHousehold
       Session.statement (householdId, userId') insertHouseholdMember
@@ -152,10 +157,13 @@ queryTests runS = testGroup "Query Tests"
       choreId2 <- Session.statement (householdId, Chore "vacuum") insertChore
       choreId3 <- Session.statement (householdId, Chore "dust") insertChore
       choreId4 <- Session.statement (householdId, Chore "windows") insertChore
-      let flexdays = FlexDaysS $ FlexDays 2
-      let strict = StrictDaysS $ StrictDays 2
-      let weekly = WeeklyPatternS $ Pattern (Set.fromList [(1, Mon), (2, Tue)]) 2
-      let monthly = MonthlyPatternS $ Pattern (Set.fromList [(1, DayOfMonth 10), (2, DayOfMonth 20)]) 2
+      today <- utctDay <$> liftIO getCurrentTime
+      let flexdays = FlexDaysSS $ FlexDaysState (FlexDays 2) today
+      let strict = StrictDaysSS $ StrictDaysState (StrictDays 2) today
+      let weeklyPattern = Pattern (Set.fromList [(1, Mon), (2, Tue)]) 2
+      let weekly = WeeklyPatternSS $ fromRight $ nextEligibleDayWeekly weeklyPattern 1 today
+      let monthlyPattern = Pattern (Set.fromList [(1, DayOfMonth 10), (2, DayOfMonth 20)]) 2
+      let monthly = MonthlyPatternSS $ fromRight $ nextEligibleDayMonthly monthlyPattern 1 today
       scheduleId1 <- insertSchedule (choreId1, flexdays)
       scheduleId2 <- insertSchedule (choreId2, strict)
       scheduleId3 <- insertSchedule (choreId3, weekly)
@@ -165,16 +173,16 @@ queryTests runS = testGroup "Query Tests"
       output3 <- Session.statement scheduleId3 getSchedule
       output4 <- Session.statement scheduleId4 getSchedule
 
-
       allOutput <- Session.statement householdId getFullChoresByHousehold
+      liftIO $ print allOutput
+      liftIO $ V.length allOutput @?= 4
 
       Session.statement scheduleId1 deleteSchedule
 
-      liftIO $ V.length allOutput @?= 4
-      liftIO $ flexdays @?= output1
-      liftIO $ strict @?= output2
-      liftIO $ weekly @?= output3
-      liftIO $ monthly @?= output4
+      liftIO $ FlexDaysS (FlexDays 2) @?= output1
+      liftIO $ StrictDaysS (StrictDays 2) @?= output2
+      liftIO $ WeeklyPatternS weeklyPattern @?= output3
+      liftIO $ MonthlyPatternS monthlyPattern @?= output4
   ]
 
 -- patternTests :: TestTree

@@ -28,14 +28,14 @@ data Pattern a = Pattern
 type WeeklyPattern = Pattern Weekday
 type MonthlyPattern = Pattern DayOfMonth
 
-data PatternState a = PatternState (Pattern a) PatternPosition
+data PatternState a = PatternState (Pattern a) PatternPosition deriving (Eq, Show)
 type WeeklyPatternState = PatternState Weekday
 type MonthlyPatternState = PatternState DayOfMonth
 
 data PatternPosition = PatternPosition
   { _day :: Day
   , _index :: Int
-  } deriving Show
+  } deriving (Eq, Show)
 
 data PatternStateError
   = IndexOutOfRange
@@ -77,7 +77,6 @@ validatePatternState
 validatePatternState f pat@Pattern{..} pos@PatternPosition {..} =
   bool (Left DayInvalid) (Right $ PatternState pat pos) .
   (f _day ==) . snd =<< elemAtEither _index _elems
-
 
 validateWeeklyState
   :: WeeklyPattern

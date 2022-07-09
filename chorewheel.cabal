@@ -68,6 +68,7 @@ library
     , monad-logger
     , mtl
     , profunctors
+    , raw-strings-qq
     , resource-pool
     , servant >=0.19
     , servant-auth-server
@@ -78,6 +79,7 @@ library
     , time
     , tmp-postgres
     , transformers
+    , tuple
     , utf8-string
     , vector
     , warp
@@ -113,6 +115,7 @@ executable chorewheel
     , monad-logger
     , mtl
     , profunctors
+    , raw-strings-qq
     , resource-pool
     , servant >=0.19
     , servant-auth-server
@@ -123,6 +126,7 @@ executable chorewheel
     , time
     , tmp-postgres
     , transformers
+    , tuple
     , utf8-string
     , vector
     , warp
@@ -180,6 +184,7 @@ test-suite spec
     , monad-logger
     , mtl
     , profunctors
+    , raw-strings-qq
     , resource-pool
     , servant >=0.19
     , servant-auth-server
@@ -190,6 +195,7 @@ test-suite spec
     , time
     , tmp-postgres
     , transformers
+    , tuple
     , utf8-string
     , vector
     , warp
