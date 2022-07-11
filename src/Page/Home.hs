@@ -3,7 +3,6 @@
 module Page.Home where
 
 import Lucid
-import Lucid.Base
 import Data.Text
 
 import Servant.Links

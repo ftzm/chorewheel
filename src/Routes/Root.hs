@@ -15,10 +15,15 @@ import Servant.Links
 import Lucid
 import Data.Text
 
+import           Web.FormUrlEncoded          (FromForm)
 import ServantLucid
-import Models
-import App
 import Routes.SessionAuth
+
+newtype CreateHouseholdPayload = CreateHouseholdPayload
+  { newHouseholdName :: Text
+  } deriving Generic
+
+instance FromForm CreateHouseholdPayload
 
 data ChoreWheelApi mode = ChoreWheelApi
   { _ping :: mode
@@ -35,6 +40,20 @@ data ChoreWheelApi mode = ChoreWheelApi
       :- "home"
       :> AuthProtect "session-auth"
       :> Get '[HTML] (Html ())
+  , _households :: mode
+      :- "households"
+      :> AuthProtect "session-auth"
+      :> Get '[HTML] (Html ())
+  , _householdCreate :: mode
+      :- "household-create"
+      :> AuthProtect "session-auth"
+      :> ReqBody '[FormUrlEncoded] CreateHouseholdPayload
+      :> Post '[HTML] (Html ())
+  , _householdLeave :: mode
+      :- "household-leave"
+      :> AuthProtect "session-auth"
+      :> Capture "householdId" Int
+      :> Post '[HTML] (Html ())
   , _landing :: mode
       :- Get '[HTML] (Html ())
   } deriving Generic

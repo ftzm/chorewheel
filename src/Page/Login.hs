@@ -3,7 +3,7 @@
 module Page.Login where
 
 import Lucid
-import Lucid.Base
+--import Lucid.Base
 import Data.Text
 
 import Servant.Links
@@ -11,7 +11,7 @@ import Routes.Root
 import Routes.SessionAuth
 
 import Models (User(..))
-import Page.Attribute
+--import Page.Attribute
 import Page.Common
 
 sessionLoginLink :: Text

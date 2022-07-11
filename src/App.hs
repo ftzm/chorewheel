@@ -14,6 +14,7 @@ import GHC.Generics
 import Effect.Auth.Jwt
 import Effect.Auth.Session
 import Effect.User
+import Effect.Household
 
 data AppEnv = AppEnv
   { _pool :: HP.Pool
@@ -25,5 +26,4 @@ newtype App a = App (ReaderT AppEnv (ExceptT ServerError IO) a)
   deriving AuthM via (AuthT App)
   deriving SessionAuthM via (SessionAuthT App)
   deriving UserM via (UserT App)
-  --deriving MonadGetUsers via (GetUsersT App)
-  --deriving MonadLog via (ConsoleLogT App)
+  deriving HouseholdM via (HouseholdT App)

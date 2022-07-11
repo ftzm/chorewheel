@@ -15,7 +15,6 @@ import Control.Monad.Except
 --
 import qualified Hasql.Pool as HP
 import qualified Hasql.Session as HS
-import Effect.Auth.Jwt
 import Effect.Auth.Session
 import Effect.Auth.Password
 import DB.User

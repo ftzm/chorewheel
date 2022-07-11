@@ -20,7 +20,6 @@ import Control.Monad.Error.Class
 import Data.Time.Clock
 import Control.Monad.IO.Class
 import Control.Monad.Reader
-import Control.Monad.Identity
 import qualified Data.Vector as V
 import qualified Data.Set as Set
 
@@ -33,7 +32,6 @@ import Schedule.Primitives
 import DB.User
 import DB.Password
 import qualified DB.RefreshToken as Ref
-import DB.Session as Sesh
 import Effect.Auth.Session
 import DB.Household
 import DB.Chore
@@ -146,40 +144,41 @@ unitTests runS pool = testGroup "Query Tests"
       liftIO $ originalId @?= fromJust dbUserId
   -- Session
   , testCase "Continue session fails when no session" $ do
-      let pw = PasswordHash "test_password"
       Pool.use pool $ Session.sql "BEGIN"
       result <- runReaderT (continueSessionImpl $ SessionToken "missingToken") pool
       Pool.use pool $ Session.sql "ROLLBACK"
       result @?= Nothing
   , testCase "Continue session finds user by token" $ do
-      let pw = PasswordHash "test_password"
       Pool.use pool $ Session.sql "BEGIN"
       newId <- rollBackOnError pool $ Session.statement (User "test" "test") insertUser
       token <- rollBackOnError pool $ createSessionImpl newId
       result <- runReaderT (continueSessionImpl token) pool
-      token <- rollBackOnError pool $ createSessionImpl newId
-      userId <- runReaderT (continueSessionImpl token) pool
       Pool.use pool $ Session.sql "ROLLBACK"
       result @?= Just newId
   , testCase "Kill Session removes token" $ do
-      let pw = PasswordHash "test_password"
       Pool.use pool $ Session.sql "BEGIN"
       newId <- rollBackOnError pool $ Session.statement (User "test" "test") insertUser
       token <- rollBackOnError pool $ createSessionImpl newId
-      userId <- runReaderT (continueSessionImpl token) pool
+      userId' <- runReaderT (continueSessionImpl token) pool
       endResult <- flip runReaderT pool $ do
         killSessionImpl newId
         continueSessionImpl token
       Pool.use pool $ Session.sql "ROLLBACK"
-      isJust userId @?= True
+      isJust userId' @?= True
       endResult @?= Nothing
   -- Household
-  , testCase "Insert household, membership, and get" $ runS $ do
+  , testCase "Household round trip" $ runS $ do
       userId' <- Session.statement (User "test" "test") insertUser
       householdId <- Session.statement (Household "home") insertHousehold
       Session.statement (householdId, userId') insertHouseholdMember
       result <- Session.statement userId' getUserHouseholds
       liftIO $ V.head result @?= (householdId, Household "home")
+
+      Session.statement (householdId, userId') removeHouseholdMember
+      resultAfter <- Session.statement userId' getUserHouseholds
+      liftIO $ resultAfter @?= V.empty
+
+      Session.statement householdId deleteEmptyHousehold
       liftIO assertCompletes
   -- Chore
   , testCase "Chore rounde trip" $ runS $ do
