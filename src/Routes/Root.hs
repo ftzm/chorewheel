@@ -25,6 +25,12 @@ newtype CreateHouseholdPayload = CreateHouseholdPayload
 
 instance FromForm CreateHouseholdPayload
 
+-- newtype ScheduleFormPayload =
+--   ScheduleFormPayload {formType :: Text }
+--   deriving Generic
+--
+-- instance FromForm ScheduleFormPayload
+
 data ChoreWheelApi mode = ChoreWheelApi
   { _ping :: mode
       :- "ping"
@@ -54,8 +60,22 @@ data ChoreWheelApi mode = ChoreWheelApi
       :> AuthProtect "session-auth"
       :> Capture "householdId" Int
       :> Post '[HTML] (Html ())
+  , _householdChores :: mode
+      :- AuthProtect "session-auth"
+      :> "household"
+      :> Capture "householdName" Text
+      :> "chores"
+      :> Get '[HTML] (Html ())
+  , _scheduleForm :: mode
+      :- AuthProtect "session-auth"
+      :> "schedule_form"
+      :> QueryParam' '[Required, Strict] "form_type" Text
+      :> Get '[HTML] (Html ())
   , _landing :: mode
       :- Get '[HTML] (Html ())
+  , _static :: mode
+      :- "static"
+      :> Raw
   } deriving Generic
 
 rootLinks :: ChoreWheelApi (AsLink Link)

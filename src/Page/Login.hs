@@ -17,16 +17,17 @@ import Page.Common
 sessionLoginLink :: Text
 sessionLoginLink = pack $ show $ linkURI $ _sessionLogin $ _session rootLinks
 
+
 loginPage :: Html ()
 loginPage =
     container "Log In" $ do
       div_ [id_ "header", style_ "color:green"] "Log In"
-      p_ $ span_ (strong_ "Log In")
       hr_ []
+      br_ []
       form_ [method_ "post", action_ sessionLoginLink] $ do
-        input_ [name_ "_username"]
-        input_ [name_ "_password"]
-        button_ [type_ "submit"] "Submit"
+        myInput [class_ "mr-2", placeholder_ "username", name_ "_username"]
+        myInput [class_ "mr-2", placeholder_ "password", name_ "_password"]
+        myButton [type_ "submit"] "Submit"
 
 loggedInPage :: User -> Html ()
 loggedInPage user =

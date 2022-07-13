@@ -17,24 +17,19 @@ import qualified Hasql.Session as HS
 import Data.Time.Clock
 import Data.Text.Encoding
 import Control.Monad.Reader
-import Data.Maybe
 import Web.Cookie                       (parseCookies)
 
 --servant
 import Servant
-import Servant.Server
-import Servant.API.Experimental.Auth
 import Servant.Server.Experimental.Auth (AuthHandler, AuthServerData,
                                          mkAuthHandler)
 import Network.Wai                      (Request, requestHeaders)
-import qualified Hasql.Pool as HP
 import Data.ByteString.Lazy as LBS
 import Data.ByteString as BS
 
 import Models
 import DB
 import DB.Session
-import DB.Password
 import Effect.Auth.Password
 
 -------------------------------------------------------------------------------
@@ -87,13 +82,13 @@ instance WithDb r m => SessionAuthM (SessionAuthT m) where
 type instance AuthServerData (AuthProtect "session-auth") = UserId
 
 getCookieOrError :: Request -> BS.ByteString -> Either LBS.ByteString Text
-getCookieOrError req name = do
+getCookieOrError req name' = do
   cookieHeader <- maybeToEither
     "Missing cookie header"
     (lookup "cookie" $ requestHeaders req)
   cookie <- maybeToEither
-    (fromStrict $ "Missing cookie: " <> name)
-    (lookup name $ parseCookies cookieHeader)
+    (fromStrict $ "Missing cookie: " <> name')
+    (lookup name' $ parseCookies cookieHeader)
   pure $ decodeUtf8 cookie
   where
     maybeToEither e = maybe (Left e) Right

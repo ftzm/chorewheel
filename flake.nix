@@ -21,6 +21,7 @@
               })
               zlib
               postgresql
+              docker-compose
               inotify-tools
               lsof
               expect

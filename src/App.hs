@@ -15,6 +15,7 @@ import Effect.Auth.Jwt
 import Effect.Auth.Session
 import Effect.User
 import Effect.Household
+import Effect.Chore
 
 data AppEnv = AppEnv
   { _pool :: HP.Pool
@@ -27,3 +28,4 @@ newtype App a = App (ReaderT AppEnv (ExceptT ServerError IO) a)
   deriving SessionAuthM via (SessionAuthT App)
   deriving UserM via (UserT App)
   deriving HouseholdM via (HouseholdT App)
+  deriving ChoreM via (ChoreT App)

@@ -11,14 +11,16 @@ import Data.Text
 import Web.Cookie
 import Data.Text.Encoding
 
-import App
 import Models
 import Servant.API
 import Effect.Auth.Session as Sess
 import Routes.SessionAuth
 import ApiUtil
 
-sessionAuth :: SessionAuth (AsServerT App)
+sessionAuth
+  :: MonadError ServerError m
+  => SessionAuthM m
+  => SessionAuth (AsServerT m)
 sessionAuth = SessionAuth
   { _sessionLogin = sessionLogin
   , _sessionLogout = return sessionLogout

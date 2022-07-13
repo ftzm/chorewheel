@@ -3,8 +3,6 @@
 module Page.Landing where
 
 import Lucid
-import Lucid.Base
-import Data.Text
 
 import Page.Common
 

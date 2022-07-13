@@ -2,10 +2,13 @@
 
 module Page.Common where
 
+import Servant.Links
 import Lucid
 import qualified Data.Text as T
 
 import Page.Attribute
+import Routes.Root
+import Routes.SessionAuth
 
 htmxScript :: Html ()
 htmxScript =
@@ -33,3 +36,14 @@ container title body =
         li_ $ a_ [href_ $ T.pack $ show $ linkURI $ _sessionLogout $ _session rootLinks] "logout"
 
       div_ [class_ "flex-1 p-4"] body
+
+myInput :: [Attributes] -> Html ()
+myInput = input_ . (<>) [type_ "text", class_ style]
+  where style = "shadow appearance-none border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+
+myButton :: [Attributes] -> Html a -> Html a
+myButton = button_ . (<>) [class_ "bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"]
+
+mySelect :: [Attributes] -> [(T.Text, T.Text)] -> Html ()
+mySelect a items = select_ a $ mconcat $ flip map items $ \(value, name) ->
+  option_ [value_ value] $ toHtml name

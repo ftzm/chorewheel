@@ -4,12 +4,13 @@
 
 module DB.Household where
 
-import Data.Bifunctor (bimap)
+import Data.Bifunctor (bimap, first)
 import Data.Profunctor (dimap, lmap)
 import Hasql.Statement (Statement(..))
 import Hasql.TH
 import Models (Household(..), HouseholdId(..), UserId(..))
 import Data.Vector
+import Data.Text (Text)
 
 insertHousehold :: Statement Household HouseholdId
 insertHousehold =
@@ -52,3 +53,13 @@ deleteEmptyHousehold =
     and not exists (
       select null from household_member where household_id = h.id
     )|]
+
+getHouseholdIdFromName :: Statement (UserId, Text) (Maybe HouseholdId)
+getHouseholdIdFromName =
+  dimap (first unUserId) (fmap HouseholdId)
+  [singletonStatement|
+    select h.id :: int4?
+    from household h
+    join household_member hm on hm.household_id = h.id
+    where hm.user_id = $1 :: int4
+    and h.name = $2 :: text|]

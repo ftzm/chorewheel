@@ -18,8 +18,6 @@ import Data.Text.Encoding
 import Control.Monad.Trans.Maybe
 import Crypto.Random.Types (getRandomBytes)
 import Data.ByteString.Base64 (encode)
-import Crypto.KDF.BCrypt (hashPassword, validatePassword)
-import Data.Bool
 import Data.Traversable
 import Data.Generics.Product.Typed
 import Control.Monad.Reader
@@ -27,7 +25,6 @@ import Control.Monad.Reader
 import Models
 import DB
 import DB.RefreshToken
-import DB.Password
 import Effect.Auth.Password
 
 -------------------------------------------------------------------------------

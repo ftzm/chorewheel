@@ -36,11 +36,13 @@ library
       Effect.Auth.Jwt
       Effect.Auth.Password
       Effect.Auth.Session
+      Effect.Chore
       Effect.Household
       Effect.User
       Log
       Models
       Page.Attribute
+      Page.Chore
       Page.Common
       Page.Home
       Page.Households
@@ -176,11 +178,13 @@ test-suite spec
       Effect.Auth.Jwt
       Effect.Auth.Password
       Effect.Auth.Session
+      Effect.Chore
       Effect.Household
       Effect.User
       Log
       Models
       Page.Attribute
+      Page.Chore
       Page.Common
       Page.Home
       Page.Households
