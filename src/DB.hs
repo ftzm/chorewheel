@@ -3,6 +3,7 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE LambdaCase #-}
 
 module DB where
 
@@ -12,7 +13,6 @@ import qualified Hasql.Pool as HP
 import qualified Hasql.Session as HS
 import Data.Generics.Product.Typed
 import qualified Data.ByteString as BS
-import Data.List (intercalate)
 import qualified Data.ByteString.UTF8 as BSU
 import System.Exit (die)
 
@@ -31,7 +31,7 @@ parsePostgresConfig =
 
 makeConnStr :: PostgresConfig -> BS.ByteString
 makeConnStr PostgresConfig {..} =
-  BSU.fromString $ intercalate " "
+  BSU.fromString $ unwords
   [ "host=localhost"
   , "port=5432"
   , "dbname=postgres"
@@ -40,15 +40,9 @@ makeConnStr PostgresConfig {..} =
   ]
 
 createPool :: IO HP.Pool
-createPool = do
-  config  <- parsePostgresConfig
-  connStr <- case config of
-    Left e -> die $ "Fuck: Error creating Postgresql Connection Pool: " <> e
-    Right c -> return $ makeConnStr c
-  -- pool <- HP.acquire (10, 60, connStr)
-  -- pool siz timeout connstr
-  pool <- HP.acquire 10 connStr
-  return pool
+createPool = parsePostgresConfig >>= \case
+  Left e -> die $ "Error creating Postgresql Connection Pool: " <> e
+  Right c -> HP.acquire 10 $ makeConnStr c
 
 -- TODO: Handle db errors better
 runPool :: WithDb r m => HS.Session a -> m a
