@@ -21,7 +21,7 @@ htmxScript =
 
 container :: T.Text -> Html () -> Html ()
 container title body =
-  html_ $ do
+  doctypehtml_ $ do
     head_ $ do
       title_ $ toHtml title
       --link_ [rel_ "stylesheet", type_ "text/css", href_ "screen.css"]
