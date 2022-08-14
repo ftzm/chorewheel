@@ -45,9 +45,14 @@ choreWheelApi = ChoreWheelApi
   , _householdLeave = householdLeaveHandler
   , _householdChores = householdChoresHandler
   , _scheduleForm = scheduleFormHandler
+  , _addWeekRow = addWeekRowHandler
+  , _removeWeekRow = removeWeekRowHandler
+  , _addMonthRow = addMonthRowHandler
+  , _removeMonthRow = removeMonthRowHandler
   , _landing = landingHandler
   , _static = serveDirectoryWebApp "static"
   }
+
 
 loginHandler
   :: MonadError ServerError m
@@ -115,14 +120,23 @@ householdChoresHandler u n = do
       allChores <- getFullChores householdId
       return $ choresPage allChores
 
-scheduleFormHandler
-  :: Monad m
-  => UserId
-  -> Text
-  -> m (Html ())
-scheduleFormHandler _ p = return $ case p of
+scheduleFormHandler :: Monad m => Text -> m (Html ())
+scheduleFormHandler p = return $ case p of
+  "unscheduled" -> span_ "Unscheduled"
   "strict" -> createStrictForm
   "flex" -> createFlexForm
-  "weekly" -> span_ "weekly"
-  "monthly" -> span_ "monthly"
+  "weekly" -> createWeeklyForm 1
+  "monthly" -> createMonthlyForm 1
   _ -> span_ "impossible"
+
+addWeekRowHandler :: Monad m => Int -> m (Html ())
+addWeekRowHandler i = pure $ addWeekRow i
+
+removeWeekRowHandler :: Monad m => Int -> m (Html ())
+removeWeekRowHandler i = pure $ removeWeekRow i
+
+addMonthRowHandler :: Monad m => Int -> m (Html ())
+addMonthRowHandler i = pure $ addMonthRow i
+
+removeMonthRowHandler :: Monad m => Int -> m (Html ())
+removeMonthRowHandler i = pure $ removeMonthRow i

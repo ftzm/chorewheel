@@ -6,6 +6,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE StrictData #-}
 
 module Routes.Root where
 
@@ -67,9 +68,24 @@ data ChoreWheelApi mode = ChoreWheelApi
       :> "chores"
       :> Get '[HTML] (Html ())
   , _scheduleForm :: mode
-      :- AuthProtect "session-auth"
-      :> "schedule_form"
+      :- "schedule_form"
       :> QueryParam' '[Required, Strict] "form_type" Text
+      :> Get '[HTML] (Html ())
+  , _addWeekRow :: mode
+      :- "add_week_row"
+      :> Capture "row_id" Int
+      :> Get '[HTML] (Html ())
+  , _removeWeekRow :: mode
+      :- "remove_week_row"
+      :> Capture "row_id" Int
+      :> Get '[HTML] (Html ())
+  , _addMonthRow :: mode
+      :- "add_month_row"
+      :> Capture "row_id" Int
+      :> Get '[HTML] (Html ())
+  , _removeMonthRow :: mode
+      :- "remove_month_row"
+      :> Capture "row_id" Int
       :> Get '[HTML] (Html ())
   , _landing :: mode
       :- Get '[HTML] (Html ())
