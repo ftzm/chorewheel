@@ -12,6 +12,8 @@ import Data.Text (Text)
 import Data.Text.Encoding
 import Control.Monad
 import Control.Monad.Error.Class
+import qualified Data.Text as T
+import qualified Data.Set as S
 
 import Models
 --import App
@@ -49,6 +51,7 @@ choreWheelApi = ChoreWheelApi
   , _removeWeekRow = removeWeekRowHandler
   , _addMonthRow = addMonthRowHandler
   , _removeMonthRow = removeMonthRowHandler
+  , _createChore = \user input -> return $ toHtml $ T.pack $ show input
   , _landing = landingHandler
   , _static = serveDirectoryWebApp "static"
   }
@@ -140,3 +143,15 @@ addMonthRowHandler i = pure $ addMonthRow i
 
 removeMonthRowHandler :: Monad m => Int -> m (Html ())
 removeMonthRowHandler i = pure $ removeMonthRow i
+
+----
+
+data CreateChoreScheduleInput
+  = UnscheduledInput
+  | StrictInput Int
+  | FlexInput Int
+  | WeeklyInput (S.Set (Int, Int))
+  | MonthlyInput (S.Set (Int, Int))
+
+createChoreHandler :: Monad m => UserId -> CreateChorePayload -> m (Html ())
+createChoreHandler u p = undefined

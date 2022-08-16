@@ -16,6 +16,7 @@ import Servant.Links
 import Lucid
 import Data.Text
 
+
 import           Web.FormUrlEncoded          (FromForm)
 import ServantLucid
 import Routes.SessionAuth
@@ -25,6 +26,16 @@ newtype CreateHouseholdPayload = CreateHouseholdPayload
   } deriving Generic
 
 instance FromForm CreateHouseholdPayload
+
+data CreateChorePayload = CreateChorePayload
+  { choreName :: Text
+  , scheduleType :: Text
+  , interval :: Maybe Int
+  , days :: [Text]
+  } deriving (Show, Generic)
+
+instance FromForm CreateChorePayload
+
 
 -- newtype ScheduleFormPayload =
 --   ScheduleFormPayload {formType :: Text }
@@ -69,7 +80,7 @@ data ChoreWheelApi mode = ChoreWheelApi
       :> Get '[HTML] (Html ())
   , _scheduleForm :: mode
       :- "schedule_form"
-      :> QueryParam' '[Required, Strict] "form_type" Text
+      :> QueryParam' '[Required, Strict] "scheduleType" Text
       :> Get '[HTML] (Html ())
   , _addWeekRow :: mode
       :- "add_week_row"
@@ -87,6 +98,11 @@ data ChoreWheelApi mode = ChoreWheelApi
       :- "remove_month_row"
       :> Capture "row_id" Int
       :> Get '[HTML] (Html ())
+  , _createChore :: mode
+      :- AuthProtect "session-auth"
+      :> "create_chore"
+      :> ReqBody '[FormUrlEncoded] CreateChorePayload
+      :> Post '[HTML] (Html ())
   , _landing :: mode
       :- Get '[HTML] (Html ())
   , _static :: mode
