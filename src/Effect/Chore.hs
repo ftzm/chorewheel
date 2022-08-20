@@ -5,7 +5,6 @@
 
 module Effect.Chore where
 
-import Control.Monad.Reader
 import qualified Hasql.Session as HS
 import qualified Data.Vector as V
 

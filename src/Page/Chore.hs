@@ -104,7 +104,7 @@ monthDay monthIndex dayIndex =
   where
     labelText = toHtml $ T.pack $ show dayIndex
     inputValue = T.pack $ show monthIndex ++ "-" ++ show dayIndex
-    labelClasses = T.pack $ unwords
+    labelClasses = unwords
       [ "mr-1"
       , "mt-1"
       , "h-8"

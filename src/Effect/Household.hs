@@ -5,10 +5,8 @@
 
 module Effect.Household where
 
-import Control.Monad.Reader
 import qualified Hasql.Session as HS
 import qualified Data.Vector as V
-import Data.Text (Text)
 import Data.UUID.V4
 
 import DB

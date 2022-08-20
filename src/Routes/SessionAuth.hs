@@ -11,7 +11,6 @@ module Routes.SessionAuth where
 
 import Servant.API
 import Servant.API.Generic
-import Data.Text
 import           Web.FormUrlEncoded          (FromForm)
 import Web.Cookie
 

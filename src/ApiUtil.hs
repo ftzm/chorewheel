@@ -5,15 +5,12 @@
 
 module ApiUtil where
 
-import Data.ByteString
-import Data.Text
-import Data.Text.Encoding
 import Web.Cookie
 import Control.Monad.Error.Class
 import Data.Time.Clock
 import Data.Time.Clock.POSIX
 import Servant
-import Data.Kind
+import Data.List (lookup)
 
 getCookie :: Maybe Text -> ByteString -> Maybe ByteString
 getCookie cookies n = lookup n . parseCookies . encodeUtf8 =<< cookies

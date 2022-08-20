@@ -6,7 +6,6 @@ module Chore where
 
 import Data.Time.Clock
 import Data.Time.Calendar
-import Data.Text
 import Data.UUID
 
 -------------------------------------------------------------------------------

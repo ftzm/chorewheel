@@ -4,12 +4,10 @@
 
 module App where
 
-import Control.Monad.Reader
 import Control.Monad.Except
 import qualified Hasql.Pool as HP
 import Servant.Server (ServerError)
 import Servant.Auth.Server (JWTSettings)
-import GHC.Generics
 
 import Effect.Auth.Jwt
 import Effect.Auth.Session

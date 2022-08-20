@@ -9,9 +9,7 @@ import Network.Wai.Handler.Warp (run)
 import Servant.Server
 import Servant.Server.Generic
 import Servant.Auth.Server
-import Control.Monad.Reader
 import           Control.Monad.Error.Class
-import Control.Monad.Except
 --
 import qualified Hasql.Pool as HP
 import qualified Hasql.Session as HS

@@ -6,7 +6,6 @@
 
 module Log where
 
-import Control.Monad.Trans
 import Control.Monad.Identity
 
 class Monad m => MonadLog m where

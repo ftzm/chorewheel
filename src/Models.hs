@@ -6,14 +6,10 @@
 
 module Models where
 
-import GHC.Generics
 
 import Servant.Auth.Server
 
 import Data.Aeson
-import Data.Text (Text)
-import Control.Monad.Trans
-import Data.ByteString
 import Data.UUID
 
 data User = User

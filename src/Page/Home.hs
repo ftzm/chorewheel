@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Page.Home where
 
@@ -22,7 +23,7 @@ home =
     p_ $ span_ (strong_ "This will become a home page.")
     hr_ []
     a_ [href_ sessionLogoutLink] "log out"
-    ul_ $ mapM_ (li_ . toHtml . show) [1, 2, 3]
+    ul_ $ mapM_ (li_ . toHtml . show @Text) [1, 2, 3]
     table_ $
       tr_ $ do
         td_ "Hello!"

@@ -50,11 +50,11 @@ data ScheduleState
 -- updating. It may make sense to only have a scheduleState-like type where the
 -- state is optional
 
-nextDaysFlex :: FlexDays -> Day -> [Day]
-nextDaysFlex = undefined
-
-nextDaysStrict :: StrictDays -> Day -> [Day]
-nextDaysStrict = undefined
+-- nextDaysFlex :: FlexDays -> Day -> [Day]
+-- nextDaysFlex = undefined
+--
+-- nextDaysStrict :: StrictDays -> Day -> [Day]
+-- nextDaysStrict = undefined
 
 -- updateNextScheduled :: ScheduleState -> Day -> ScheduleState
 -- updateNextScheduled = undefined

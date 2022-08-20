@@ -7,7 +7,6 @@ module DB.Password where
 import Hasql.Statement (Statement(..))
 import Hasql.TH
 import Data.Profunctor
-import Data.Bifunctor
 
 import Models
 

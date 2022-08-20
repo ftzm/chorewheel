@@ -10,12 +10,8 @@ module DB.Schedule where
 
 import Chore
 import Contravariant.Extras.Contrazip
-import Data.Bifunctor (bimap)
-import Data.Functor.Contravariant
-import Data.Int (Int32)
 import Data.Profunctor (dimap, lmap)
 import qualified Data.Set as Set
-import Data.Text (Text)
 import qualified Data.Vector as V
 import qualified Hasql.Decoders as Decoders
 import qualified Hasql.Encoders as Encoders

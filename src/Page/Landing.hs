@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Page.Landing where
 
@@ -11,7 +12,7 @@ landingPage =
   container "ChoreWheel" $ do
     div_ [id_ "header", style_ "color:green"] "Login or don't, it depends"
     hr_ []
-    ul_ $ mapM_ (li_ . toHtml . show) [1, 2, 3]
+    ul_ $ mapM_ (li_ . toHtml . show @Text) [1, 2, 3]
     table_ $
       tr_ $ do
         td_ "Hello!"

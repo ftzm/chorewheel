@@ -8,9 +8,6 @@ import Servant.Server
 import Servant.Server.Generic
 import Servant.Server.StaticFiles
 import Lucid
-import Data.Text (Text)
-import Data.Text.Encoding
-import Control.Monad
 import Control.Monad.Error.Class
 import qualified Data.Text as T
 import qualified Data.Set as S
@@ -154,5 +151,5 @@ data CreateChoreScheduleInput
   | WeeklyInput (S.Set (Int, Int))
   | MonthlyInput (S.Set (Int, Int))
 
-createChoreHandler :: Monad m => UserId -> CreateChorePayload -> m (Html ())
-createChoreHandler _ _ = undefined
+-- createChoreHandler :: Monad m => UserId -> CreateChorePayload -> m (Html ())
+-- createChoreHandler _ _ = undefined

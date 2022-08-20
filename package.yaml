@@ -24,7 +24,10 @@ dependencies:
 #- optics
 #- servant-swagger
 - aeson
-- base >= 4.7 && < 5
+- name: base
+  version: ">= 4.7 && < 5"
+  mixin:
+    - hiding (Prelude)
 - base64-bytestring
 - bytestring
 - containers
@@ -47,6 +50,10 @@ dependencies:
 - mtl
 - profunctors
 - raw-strings-qq
+- name: relude
+  version: ">= 1.1.0.0"
+  mixin:
+    - (Relude as Prelude)
 - resource-pool
 - servant >= 0.19
 - servant-auth-server
@@ -76,6 +83,7 @@ ghc-options:
   - -Wno-missing-home-modules
   - -Wno-type-defaults
   - -Wno-orphans
+
 library:
   source-dirs: src
 

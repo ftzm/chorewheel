@@ -4,13 +4,11 @@
 
 module DB.Household where
 
-import Data.Bifunctor (bimap, first)
 import Data.Profunctor (dimap, lmap)
 import Hasql.Statement (Statement(..))
 import Hasql.TH
 import Models (Household(..), HouseholdId(..), UserId(..))
 import Data.Vector
-import Data.Text (Text)
 
 insertHousehold :: Statement Household ()
 insertHousehold =

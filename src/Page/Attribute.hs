@@ -3,7 +3,6 @@
 module Page.Attribute where
 
 import Lucid.Base
-import Data.Text
 
 crossOrigin_ :: Text -> Attributes
 crossOrigin_ = makeAttributes "crossorigin"

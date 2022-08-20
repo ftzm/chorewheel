@@ -7,9 +7,7 @@ module Server.SessionAuth where
 import Servant.Server
 import Servant.Server.Generic
 import Control.Monad.Error.Class
-import Data.Text
 import Web.Cookie
-import Data.Text.Encoding
 
 import Models
 import Servant.API

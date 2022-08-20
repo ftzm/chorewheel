@@ -6,7 +6,6 @@ module DB.RefreshToken where
 
 import Hasql.Statement (Statement(..))
 import Hasql.TH
-import Data.Text
 import Data.Profunctor
 import Data.Time.Clock
 

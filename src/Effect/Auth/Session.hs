@@ -9,23 +9,19 @@
 
 module Effect.Auth.Session where
 
-import Data.Text
-import Control.Monad.IO.Class
 import Data.ByteString.Base64 (encode)
 import Crypto.Random.Types (getRandomBytes)
 import qualified Hasql.Session as HS
 import Data.Time.Clock
-import Data.Text.Encoding
-import Control.Monad.Reader
 import Web.Cookie                       (parseCookies)
+import Data.List (lookup)
 
 --servant
 import Servant
 import Servant.Server.Experimental.Auth (AuthHandler, AuthServerData,
                                          mkAuthHandler)
 import Network.Wai                      (Request, requestHeaders)
-import Data.ByteString.Lazy as LBS
-import Data.ByteString as BS
+import qualified Data.ByteString.Lazy as LBS
 
 import Models
 import DB
@@ -81,7 +77,7 @@ instance WithDb r m => SessionAuthM (SessionAuthT m) where
 
 type instance AuthServerData (AuthProtect "session-auth") = UserId
 
-getCookieOrError :: Request -> BS.ByteString -> Either LBS.ByteString Text
+getCookieOrError :: Request -> ByteString -> Either LBS.ByteString Text
 getCookieOrError req name' = do
   cookieHeader <- maybeToEither
     "Missing cookie header"

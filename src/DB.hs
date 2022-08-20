@@ -8,30 +8,31 @@
 module DB where
 
 import Env
-import Control.Monad.Reader
 import qualified Hasql.Pool as HP
 import qualified Hasql.Session as HS
 import Data.Generics.Product.Typed
 import qualified Data.ByteString as BS
-import qualified Data.ByteString.UTF8 as BSU
-import System.Exit (die)
+import Data.Text (pack)
 
 type WithDb r m = (MonadReader r m, HasType HP.Pool r, MonadIO m)
 
 data PostgresConfig = PostgresConfig
-  { user :: String
-  , password :: String
+  { user :: Text
+  , password :: Text
   } deriving (Show, Eq)
+
+text :: Env.Reader e Text
+text = Right . pack
 
 parsePostgresConfig :: IO (Either String PostgresConfig)
 parsePostgresConfig =
   Env.parseOr pure (header "Postgresql Environment") $ PostgresConfig
-  <$> var (str <=< nonempty) "POSTGRES_USER"      (help "User" <> def "user")
-  <*> var (str <=< nonempty) "POSTGRES_PASSWORD"  (help "Password" <> def "hunter2")
+  <$> var (text <=< nonempty) "POSTGRES_USER"      (help "User" <> def "user")
+  <*> var (text <=< nonempty) "POSTGRES_PASSWORD"  (help "Password" <> def "hunter2")
 
 makeConnStr :: PostgresConfig -> BS.ByteString
 makeConnStr PostgresConfig {..} =
-  BSU.fromString $ unwords
+  encodeUtf8 $ unwords
   [ "host=localhost"
   , "port=5432"
   , "dbname=postgres"

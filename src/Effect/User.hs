@@ -5,7 +5,6 @@
 
 module Effect.User where
 
-import Control.Monad.Reader
 import qualified Hasql.Session as HS
 
 import DB

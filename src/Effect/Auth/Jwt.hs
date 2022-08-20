@@ -9,18 +9,13 @@
 module Effect.Auth.Jwt where
 
 import Servant.Auth.Server (JWTSettings, makeJWT)
-import Control.Monad.IO.Class
 import Data.Time.Clock
 import qualified Data.ByteString.Lazy as BL
-import Data.ByteString
 import qualified Hasql.Session as HS
-import Data.Text.Encoding
-import Control.Monad.Trans.Maybe
 import Crypto.Random.Types (getRandomBytes)
 import Data.ByteString.Base64 (encode)
 import Data.Traversable
 import Data.Generics.Product.Typed
-import Control.Monad.Reader
 
 import Models
 import DB

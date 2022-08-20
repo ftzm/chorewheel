@@ -5,7 +5,6 @@
 
 module DB.User where
 
-import Data.Functor.Contravariant ((>$<))
 import Data.Profunctor (dimap, lmap)
 import Hasql.Statement (Statement(..))
 import qualified Hasql.Decoders as D

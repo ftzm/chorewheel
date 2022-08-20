@@ -12,11 +12,12 @@ module Schedule.Pattern
   --) where
   where
 
-import Data.Set (Set, elemAt, size)
+import Prelude hiding (head)
+import Data.Set (elemAt, size)
 import Data.Time.Calendar hiding (DayOfMonth)
-import Data.List (unfoldr)
 import Schedule.Primitives
-import Data.Bool
+--todo: unfuck
+import Data.List (head)
 
 data Pattern a = Pattern
   -- ^ set of (iteration index, position in iteration)

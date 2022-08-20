@@ -18,10 +18,7 @@ import qualified Data.Set as Set
 import Text.RawString.QQ
 import qualified Hasql.Encoders as E
 import qualified Hasql.Decoders as D
-import Data.Functor.Contravariant ((>$<))
 import Data.Tuple.Sequence
-import Data.Functor
-import Control.Monad (replicateM)
 
 import Models
 import Chore
@@ -66,7 +63,7 @@ getFullChoresByHousehold = Statement sql encoder (D.rowVector rowDecoder) True
             elems = Set.fromList $ zip (map fromIntegral ei) elemDays
         in MonthlyPatternSS $ PatternState (Pattern elems $ fromIntegral i)
            $ PatternPosition scheduled $ fromIntegral index
-      e -> error $ "impossible due to DB constraints" ++ show e
+      e -> error $ "impossible due to DB constraints: " <> show e
       where
         rawResult = (,,,,,)
           <$> colM chore

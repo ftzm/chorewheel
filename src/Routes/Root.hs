@@ -14,7 +14,6 @@ import Servant.API
 import Servant.API.Generic
 import Servant.Links
 import Lucid
-import Data.Text
 import Data.UUID
 
 
