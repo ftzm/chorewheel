@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedStrings          #-}
-{-# LANGUAGE TypeApplications          #-}
 {-# LANGUAGE QuasiQuotes          #-}
 
 module DB.RefreshToken where

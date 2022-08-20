@@ -1,6 +1,3 @@
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-
 module Schedule.Primitives where
 
 import Data.Time.Calendar hiding (DayOfMonth)

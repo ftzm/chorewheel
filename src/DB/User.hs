@@ -1,7 +1,4 @@
-{-# LANGUAGE OverloadedStrings          #-}
-{-# LANGUAGE TypeApplications          #-}
 {-# LANGUAGE QuasiQuotes          #-}
-{-# LANGUAGE RecordWildCards          #-}
 
 module DB.User where
 

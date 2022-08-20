@@ -1,7 +1,3 @@
-{-# LANGUAGE FlexibleInstances     #-}
-{-# LANGUAGE MultiParamTypeClasses     #-}
-{-# LANGUAGE OverloadedStrings #-}
-
 module ServantLucid(HTML) where
 
 -- Servant.Lucid failed with an inscrutable typeclass error when I tried to use

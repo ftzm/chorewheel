@@ -84,8 +84,21 @@ ghc-options:
   - -Wno-type-defaults
   - -Wno-orphans
 
+# will become language >= 0.35
+
+default-extensions:
+  - OverloadedStrings
+  - RecordWildCards
+  - LambdaCase
+  - DerivingStrategies
+  - DerivingVia
+  - DuplicateRecordFields
+  - OverloadedRecordDot
+
 library:
   source-dirs: src
+  verbatim:
+    default-language: GHC2021
 
 executables:
   chorewheel-exe:

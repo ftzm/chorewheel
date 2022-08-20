@@ -1,12 +1,4 @@
-{-# LANGUAGE OverloadedStrings          #-}
-{-# LANGUAGE TypeApplications          #-}
 {-# LANGUAGE QuasiQuotes          #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE TupleSections #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE OverloadedRecordDot #-}
 
 module DB.Chore where
 

@@ -1,6 +1,4 @@
-{-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE QuasiQuotes          #-}
-{-# LANGUAGE RecordWildCards          #-}
 
 module DB.Household where
 

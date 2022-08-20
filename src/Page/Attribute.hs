@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 module Page.Attribute where
 
 import Lucid.Base

@@ -1,8 +1,4 @@
-{-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE DuplicateRecordFields #-}
 
 module Models where
 

@@ -1,5 +1,3 @@
-{-# LANGUAGE TypeApplications #-}
-
 module Effect.Auth.Password where
 
 import Crypto.KDF.BCrypt (hashPassword, validatePassword)

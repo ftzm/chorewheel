@@ -63,6 +63,14 @@ library
       Paths_chorewheel
   hs-source-dirs:
       src
+  default-extensions:
+      OverloadedStrings
+      RecordWildCards
+      LambdaCase
+      DerivingStrategies
+      DerivingVia
+      DuplicateRecordFields
+      OverloadedRecordDot
   ghc-options: -Wall -Werror -Wwarn=missing-home-modules -Wno-unused-do-bind -Wno-missing-home-modules -Wno-type-defaults -Wno-orphans
   build-depends:
       aeson
@@ -112,7 +120,7 @@ library
   mixins:
       base hiding (Prelude)
     , relude (Relude as Prelude)
-  default-language: Haskell2010
+  default-language: GHC2021
 
 executable chorewheel-exe
   main-is: Main.hs
@@ -122,6 +130,14 @@ executable chorewheel-exe
       Paths_chorewheel
   hs-source-dirs:
       app
+  default-extensions:
+      OverloadedStrings
+      RecordWildCards
+      LambdaCase
+      DerivingStrategies
+      DerivingVia
+      DuplicateRecordFields
+      OverloadedRecordDot
   ghc-options: -Wall -Werror -Wwarn=missing-home-modules -Wno-unused-do-bind -Wno-missing-home-modules -Wno-type-defaults -Wno-orphans -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       aeson
@@ -220,6 +236,14 @@ test-suite spec
   hs-source-dirs:
       test
       src
+  default-extensions:
+      OverloadedStrings
+      RecordWildCards
+      LambdaCase
+      DerivingStrategies
+      DerivingVia
+      DuplicateRecordFields
+      OverloadedRecordDot
   ghc-options: -Wall -Werror -Wwarn=missing-home-modules -Wno-unused-do-bind -Wno-missing-home-modules -Wno-type-defaults -Wno-orphans
   build-depends:
       aeson
