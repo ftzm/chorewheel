@@ -3,7 +3,7 @@
 
 module Schedule.Primitives where
 
-import Data.Time.Calendar
+import Data.Time.Calendar hiding (DayOfMonth)
 
 data Weekday = Mon | Tue | Wed | Thu | Fri | Sat | Sun deriving (Show, Eq, Ord, Bounded, Enum)
 

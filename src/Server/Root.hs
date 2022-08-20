@@ -14,6 +14,7 @@ import Control.Monad
 import Control.Monad.Error.Class
 import qualified Data.Text as T
 import qualified Data.Set as S
+import Data.UUID
 
 import Models
 --import App
@@ -51,7 +52,7 @@ choreWheelApi = ChoreWheelApi
   , _removeWeekRow = removeWeekRowHandler
   , _addMonthRow = addMonthRowHandler
   , _removeMonthRow = removeMonthRowHandler
-  , _createChore = \user input -> return $ toHtml $ T.pack $ show input
+  , _createChore = \_ input -> return $ toHtml $ T.pack $ show input
   , _landing = landingHandler
   , _static = serveDirectoryWebApp "static"
   }
@@ -93,7 +94,7 @@ householdCreateHandler
   -> CreateHouseholdPayload
   -> m (Html ())
 householdCreateHandler u (CreateHouseholdPayload n) = do
-  createHousehold u (Household n)
+  createHousehold u n
   households <- getHouseholds u
   return $ householdsFragment households
 
@@ -101,10 +102,10 @@ householdLeaveHandler
   :: MonadError ServerError m
   => HouseholdM m
   => UserId
-  -> Int
+  -> UUID
   -> m (Html ())
 householdLeaveHandler u hId = do
-  leaveHousehold u $ HouseholdId $ fromIntegral hId
+  leaveHousehold u $ HouseholdId hId
   households <- getHouseholds u
   return $ householdsFragment households
 
@@ -154,4 +155,4 @@ data CreateChoreScheduleInput
   | MonthlyInput (S.Set (Int, Int))
 
 createChoreHandler :: Monad m => UserId -> CreateChorePayload -> m (Html ())
-createChoreHandler u p = undefined
+createChoreHandler _ _ = undefined

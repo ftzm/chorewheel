@@ -9,14 +9,15 @@ import Control.Monad.Reader
 import qualified Hasql.Session as HS
 import qualified Data.Vector as V
 import Data.Text (Text)
+import Data.UUID.V4
 
 import DB
 import DB.Household
 import Models
 
 class Monad m => HouseholdM m where
-  getHouseholds :: UserId -> m [(HouseholdId, Household)]
-  createHousehold :: UserId -> Household -> m ()
+  getHouseholds :: UserId -> m [Household]
+  createHousehold :: UserId -> Text -> m ()
   leaveHousehold :: UserId -> HouseholdId -> m ()
   householdIdFromName :: UserId -> Text -> m (Maybe HouseholdId)
 
@@ -26,7 +27,8 @@ newtype HouseholdT m a = HouseholdT (m a)
 instance (WithDb r m) => HouseholdM (HouseholdT m) where
   getHouseholds i = runPool $ HS.statement i (V.toList <$> getUserHouseholds)
   createHousehold u h = runPool $ do
-    householdId <- HS.statement h insertHousehold
+    householdId <- HouseholdId <$> liftIO nextRandom
+    HS.statement (Household householdId h ) insertHousehold
     HS.statement (householdId, u) insertHouseholdMember
   leaveHousehold u h = runPool $ do
     HS.statement (h, u) removeHouseholdMember

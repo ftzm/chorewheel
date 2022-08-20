@@ -15,6 +15,7 @@ import Servant.API.Generic
 import Servant.Links
 import Lucid
 import Data.Text
+import Data.UUID
 
 
 import           Web.FormUrlEncoded          (FromForm)
@@ -70,7 +71,7 @@ data ChoreWheelApi mode = ChoreWheelApi
   , _householdLeave :: mode
       :- "household-leave"
       :> AuthProtect "session-auth"
-      :> Capture "householdId" Int
+      :> Capture "householdId" UUID
       :> Post '[HTML] (Html ())
   , _householdChores :: mode
       :- AuthProtect "session-auth"

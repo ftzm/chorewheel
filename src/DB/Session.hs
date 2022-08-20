@@ -16,7 +16,7 @@ upsertToken =
   lmap (\(UserId i, SessionToken t, e) -> (i, t, e))
   [resultlessStatement|
     insert into session_token (user_id, token_string, expiry)
-    values ($1 :: int4, $2 :: text, $3 :: timestamptz)
+    values ($1 :: uuid, $2 :: text, $3 :: timestamptz)
     on conflict (user_id) do update
     set token_string = EXCLUDED.token_string, expiry = EXCLUDED.expiry|]
 
@@ -28,9 +28,9 @@ extendToken =
     SET expiry = ($2 :: timestamptz)
     WHERE token_string = ($1 :: text)
     AND expiry > now()
-    RETURNING user_id :: int4|]
+    RETURNING user_id :: uuid|]
 
 deleteToken :: Statement UserId ()
 deleteToken =
   lmap unUserId
-  [resultlessStatement| delete from session_token where user_id = $1 :: int4|]
+  [resultlessStatement| delete from session_token where user_id = $1 :: uuid|]

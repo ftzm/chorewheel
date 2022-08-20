@@ -4,13 +4,15 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE OverloadedRecordDot #-}
 
 module DB.Chore where
 
 import Hasql.Statement (Statement(..))
 import Hasql.TH
-import Data.Profunctor (dimap)
-import Data.Bifunctor (bimap)
+import Data.Profunctor (lmap, dimap)
 import qualified Data.Vector as V
 import qualified Data.Set as Set
 import Text.RawString.QQ
@@ -27,30 +29,29 @@ import Schedule
 import Schedule.Pattern
 import Schedule.Primitives
 
-insertChore :: Statement (HouseholdId, Chore) ChoreId
+insertChore :: Statement (HouseholdId, Chore) ()
 insertChore =
-  dimap (bimap unHouseholdId _name) ChoreId
-  [singletonStatement|
-    insert into chore (household_id, name)
-    values ($1 :: int4, $2 :: text)
-    returning id :: int4 |]
+  lmap (\(HouseholdId hi, Chore{..}) -> (unChoreId id', hi, name))
+  [resultlessStatement|
+    insert into chore (id, household_id, name)
+    values ($1 :: uuid, $2 :: uuid, $3 :: text)|]
 
-householdChores :: Statement HouseholdId (V.Vector (ChoreId, Chore))
+householdChores :: Statement HouseholdId (V.Vector Chore)
 householdChores =
-  dimap unHouseholdId (fmap $ bimap ChoreId Chore)
+  dimap unHouseholdId (fmap (\(i, n) -> Chore (ChoreId i) n))
   [vectorStatement|
-    select c.id :: int4, c.name :: text
+    select c.id :: uuid, c.name :: text
     from chore c
-    where c.household_id = $1 :: int4
+    where c.household_id = $1 :: uuid
     order by name|]
 
 getFullChoresByHousehold
-  :: Statement HouseholdId (V.Vector (ChoreId, Chore, ScheduleState))
+  :: Statement HouseholdId (V.Vector (Chore, ScheduleState))
 getFullChoresByHousehold = Statement sql encoder (D.rowVector rowDecoder) True
   where
-    encoder = unHouseholdId >$< E.param (E.nonNullable E.int4)
+    encoder = unHouseholdId >$< E.param (E.nonNullable E.uuid)
     rowDecoder = rawResult <&>  \raw@((choreId, choreName), _, _, _, _, _) ->
-      (ChoreId choreId, Chore choreName,) $ case raw of
+      (Chore (ChoreId choreId) choreName,) $ case raw of
       (_, "flex_days", Just (days, scheduled), _, _, _) ->
         FlexDaysSS $ FlexDaysState (FlexDays $ fromIntegral days) scheduled
       (_, "strict_days", _, Just (days, scheduled), _, _) ->
@@ -78,7 +79,7 @@ getFullChoresByHousehold = Statement sql encoder (D.rowVector rowDecoder) True
         fieldM = D.field . D.nullable
         arr = D.array . D.dimension replicateM . D.element . D.nonNullable
         chore = D.composite $ (,)
-          <$> (D.field . D.nonNullable) D.int4
+          <$> (D.field . D.nonNullable) D.uuid
           <*> (D.field . D.nonNullable) D.text
         simple = D.composite $ (,) <$> fieldM D.int4 <*> fieldM D.date
         pat = D.composite $ (,,,,)
@@ -123,5 +124,5 @@ getFullChoresByHousehold = Statement sql encoder (D.rowVector rowDecoder) True
         join monthly_pattern_elem mpe on mp.id = mp.id
         group by mp.id, mpe.monthly_pattern_id
       ) mp on mp.id = s.id
-      where c.household_id = $1 :: int4
+      where c.household_id = $1 :: uuid
       |]

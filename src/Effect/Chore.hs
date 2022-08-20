@@ -16,7 +16,7 @@ import DB
 import DB.Chore
 
 class Monad m => ChoreM m where
-  getFullChores :: HouseholdId -> m [(ChoreId, Chore, ScheduleState)]
+  getFullChores :: HouseholdId -> m [(Chore, ScheduleState)]
 
 newtype ChoreT m a = ChoreT (m a)
   deriving newtype (Functor, Applicative, Monad, MonadIO, MonadReader r)

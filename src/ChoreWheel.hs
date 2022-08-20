@@ -19,6 +19,7 @@ import Effect.Auth.Session
 import Effect.Auth.Password
 import DB.User
 import Models
+import Data.UUID.V4
 
 import App
 import Server.Root
@@ -26,9 +27,10 @@ import DB
 
 createTestUser :: HP.Pool -> IO ()
 createTestUser p = do
-  i <- HP.use p ( HS.statement (User "matt" "m@test.com") insertUser)
+  userId <- UserId <$> nextRandom
+  HP.use p ( HS.statement (User userId "matt" "m@test.com") insertUser)
     >>= either (fail . show) return
-  HP.use p $ createPassword i (Password "test")
+  HP.use p $ createPassword userId (Password "test")
   return ()
 
 -- TODO: Investigate how to use this to convert internal errors to servant errors

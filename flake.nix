@@ -6,7 +6,7 @@
   outputs = { self, nixpkgs, flake-utils, haskellNix }:
     flake-utils.lib.eachSystem [ "x86_64-linux" "x86_64-darwin" ] (system:
       let
-        ghcVersion = "902";
+        ghcVersion = "921";
         devDrv = pkgs.mkShell {
           buildInputs = with pkgs;
             [

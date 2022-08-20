@@ -2,7 +2,7 @@
 -- User
 
 CREATE TABLE IF NOT EXISTS "user" (
-  id SERIAL PRIMARY KEY,
+  id UUID PRIMARY KEY,
   name text UNIQUE NOT NULL,
   email TEXT UNIQUE NOT NULL
 );
@@ -13,12 +13,12 @@ CREATE UNIQUE INDEX IF NOT EXISTS user_name_idx ON "user" (name);
 -- Auth
 
 CREATE TABLE IF NOT EXISTS password (
-  user_id INT PRIMARY KEY REFERENCES "user",
+  user_id UUID PRIMARY KEY REFERENCES "user",
   password_hash text NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS refresh_token (
-  user_id INT PRIMARY KEY REFERENCES "user",
+  user_id UUID PRIMARY KEY REFERENCES "user",
   token_string TEXT UNIQUE NOT NULL,
   expiry timestamp NOT NULL
 );
@@ -27,7 +27,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS refresh_token_token_string_idx
   ON refresh_token (token_string);
 
 CREATE TABLE IF NOT EXISTS session_token (
-  user_id INT PRIMARY KEY REFERENCES "user",
+  user_id UUID PRIMARY KEY REFERENCES "user",
   token_string TEXT UNIQUE NOT NULL,
   expiry timestamp NOT NULL
 );
@@ -39,13 +39,13 @@ CREATE UNIQUE INDEX IF NOT EXISTS session_token_token_string_idx
 -- Household
 
 CREATE TABLE IF NOT EXISTS household (
-  id SERIAL PRIMARY KEY,
+  id UUID PRIMARY KEY,
   name TEXT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS household_member (
-  household_id INT NOT NULL REFERENCES household,
-  user_id INT NOT NULL REFERENCES "user"
+  household_id UUID NOT NULL REFERENCES household,
+  user_id UUID NOT NULL REFERENCES "user"
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS household_member_id
@@ -55,8 +55,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS household_member_id
 -- Chore
 
 CREATE TABLE IF NOT EXISTS chore (
-  id SERIAL PRIMARY KEY,
-  household_id INT NOT NULL REFERENCES household ON DELETE CASCADE,
+  id UUID PRIMARY KEY,
+  household_id UUID NOT NULL REFERENCES household ON DELETE CASCADE,
   name TEXT NOT NULL
 );
 
@@ -66,7 +66,7 @@ CREATE TABLE IF NOT EXISTS chore (
 -- );
 
 CREATE TABLE IF NOT EXISTS chore_event (
-  chore_id INT NOT NULL,
+  chore_id UUID NOT NULL,
   day DATE NOT NULL,
   type text NOT NULL,
 
@@ -84,8 +84,8 @@ CREATE TABLE IF NOT EXISTS chore_event (
 -- );
 
 CREATE TABLE IF NOT EXISTS schedule (
-  id    SERIAL          NOT NULL,
-  chore_id INT NOT NULL,
+  id    UUID  DEFAULT gen_random_uuid() NOT NULL,
+  chore_id UUID NOT NULL,
   --type  schedule_constr   NOT NULL,
   type  text   NOT NULL,
 
@@ -94,7 +94,7 @@ CREATE TABLE IF NOT EXISTS schedule (
 );
 
 CREATE TABLE IF NOT EXISTS flex_days (
-  id INTEGER PRIMARY KEY,
+  id UUID PRIMARY KEY,
   type
       text NOT NULL
       DEFAULT 'flex_days'
@@ -105,7 +105,7 @@ CREATE TABLE IF NOT EXISTS flex_days (
 );
 
 CREATE TABLE IF NOT EXISTS strict_days (
-  id INTEGER PRIMARY KEY,
+  id UUID PRIMARY KEY,
   type
       text NOT NULL
       DEFAULT 'strict_days'
@@ -116,7 +116,7 @@ CREATE TABLE IF NOT EXISTS strict_days (
 );
 
 CREATE TABLE IF NOT EXISTS weekly_pattern (
-  id INTEGER PRIMARY KEY,
+  id UUID PRIMARY KEY,
   type
       text NOT NULL
       DEFAULT 'weekly_pattern'
@@ -130,7 +130,7 @@ CREATE TABLE IF NOT EXISTS weekly_pattern (
 
 CREATE TABLE IF NOT EXISTS weekly_pattern_elem (
   --id SERIAL PRIMARY KEY,
-  weekly_pattern_id INT NOT NULL REFERENCES weekly_pattern ON DELETE CASCADE,
+  weekly_pattern_id UUID NOT NULL REFERENCES weekly_pattern ON DELETE CASCADE,
   iteration INT NOT NULL,
   point INT NOT NULL
 );
@@ -139,7 +139,7 @@ CREATE UNIQUE INDEX weekly_pattern_elem_uq
 ON weekly_pattern_elem (weekly_pattern_id, iteration, point);
 
 CREATE TABLE IF NOT EXISTS monthly_pattern (
-  id INTEGER PRIMARY KEY,
+  id UUID PRIMARY KEY,
   type TEXT NOT NULL
   DEFAULT 'monthly_pattern'
   CHECK (type = 'monthly_pattern'),
@@ -151,8 +151,8 @@ CREATE TABLE IF NOT EXISTS monthly_pattern (
 );
 
 CREATE TABLE IF NOT EXISTS monthly_pattern_elem (
-  id SERIAL PRIMARY KEY,
-  monthly_pattern_id INT NOT NULL REFERENCES monthly_pattern ON DELETE CASCADE,
+  --id SERIAL PRIMARY KEY,
+  monthly_pattern_id UUID NOT NULL REFERENCES monthly_pattern ON DELETE CASCADE,
   iteration INT NOT NULL,
   point INT NOT NULL
 );

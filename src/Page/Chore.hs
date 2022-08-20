@@ -11,7 +11,7 @@ import Page.Common
 import Chore
 import Schedule
 
-choresPage :: [(ChoreId, Chore, ScheduleState)] -> Html ()
+choresPage :: [(Chore, ScheduleState)] -> Html ()
 choresPage chores = container "chores " $ do
   case chores of
     [] -> span_ "This household has no chores :("

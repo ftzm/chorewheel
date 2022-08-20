@@ -20,47 +20,48 @@ copyright:           "2018 Author name here"
 description:         Please see the README on GitHub at <https://github.com/ftzm/readme.org#readme>
 
 dependencies:
+# - swagger2
+#- optics
+#- servant-swagger
+- aeson
 - base >= 4.7 && < 5
-- bytestring
 - base64-bytestring
+- bytestring
+- containers
+- contravariant-extras
+- cookie
+- cryptonite
 - envparse
-- monad-logger
+- exceptions
+- generic-lens
+- hasql
+- hasql-pool
+- hasql-th
+- hasql-transaction
+- http-api-data
+- http-media
+- lucid2
+- memory
 - monad-control
+- monad-logger
+- mtl
+- profunctors
+- raw-strings-qq
 - resource-pool
 - servant >= 0.19
-- servant-server >= 0.4.7.0
 - servant-auth-server
-#- servant-swagger
-# - swagger2
-- text
-- aeson
-- warp
-- transformers
-- mtl
-- generic-lens
-- cryptonite
-- cookie
-- time
-- exceptions
-- word8
-- memory
-- lucid2
 - servant-lucid
-- wai
-- http-api-data
-- contravariant-extras
-- raw-strings-qq
+- servant-server >= 0.4.7.0
+- text
+- time
+- transformers
 - tuple
-#- optics
-- hasql
-- hasql-th
-- hasql-pool
-- hasql-transaction
-- profunctors
 - utf8-string
-- containers
-- http-media
+- uuid
 - vector
+- wai
+- warp
+- word8
 # For Tests
 - tasty
 - tasty-hunit

@@ -1,11 +1,11 @@
 module Schedule where
 
 import Data.Time.Calendar (Day)
-import Data.Int (Int32)
+import Data.UUID
 
 import Schedule.Pattern
 
-newtype ScheduleId = ScheduleId {unScheduleId :: Int32}
+newtype ScheduleId = ScheduleId {unScheduleId :: UUID}
 
 -- | Schedule next task n days since the task was completed, even if late.
 newtype FlexDays = FlexDays { unFlexDays :: Int } deriving (Eq, Show)

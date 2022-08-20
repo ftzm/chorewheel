@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module Page.Households where
 
@@ -10,22 +11,22 @@ import qualified Data.Text as T
 -- import Routes.Root
 -- import Routes.SessionAuth
 
-import Models (Household(..), HouseholdId(..))
+import Models (Household(..))
 import Page.Attribute
 import Page.Common
 
-householdsFragment :: [(HouseholdId, Household)] -> Html ()
+householdsFragment :: [Household] -> Html ()
 householdsFragment households =
   case households of
     [] -> span_ "You are not a member of any households :("
-    hs -> mconcat $ flip map hs $ \(HouseholdId i, Household h) -> do
+    hs -> mconcat $ flip map hs $ \Household{..} -> do
       li_ [class_ "m-2"] $ do
-        span_ [class_ "mr-2"] $ toHtml h
-        myButton [ hxPost_ $ T.pack $ "/household-leave/" ++ show i
+        span_ [class_ "mr-2"] $ toHtml name
+        myButton [ hxPost_ $ T.pack $ "/household-leave/" ++ show id'
                 , hxTarget_ "#households"
                 ] "Leave"
 
-householdsPage :: [(HouseholdId, Household)] -> Html ()
+householdsPage :: [Household] -> Html ()
 householdsPage households =
     container "Households" $ do
       div_ [id_ "header", style_ "color:green"] "Households"

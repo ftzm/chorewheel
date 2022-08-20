@@ -13,7 +13,7 @@ module Schedule.Pattern
   where
 
 import Data.Set (Set, elemAt, size)
-import Data.Time.Calendar
+import Data.Time.Calendar hiding (DayOfMonth)
 import Data.List (unfoldr)
 import Schedule.Primitives
 import Data.Bool

@@ -2,6 +2,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 
 module Models where
 
@@ -11,12 +12,13 @@ import Servant.Auth.Server
 
 import Data.Aeson
 import Data.Text (Text)
-import Data.Int (Int32)
 import Control.Monad.Trans
 import Data.ByteString
+import Data.UUID
 
 data User = User
-  { name :: Text
+  { id' :: UserId
+  , name :: Text
   , email :: Text
   } deriving (Show, Eq, Generic)
 
@@ -26,7 +28,7 @@ instance ToJWT User
 instance FromJWT User
 
 data JwtPayload = JwtPayload
-  { userId :: Int32
+  { userId'' :: UUID
   } deriving (Show, Eq, Generic)
 
 instance ToJSON JwtPayload -- generated via Generic
@@ -54,20 +56,34 @@ instance {-# OVERLAPPABLE #-}
   ) => GetUsers (t m) where
   getUsers = lift getUsers
 
-newtype UserId = UserId {unUserId :: Int32} deriving (Show, Eq)
+newtype UserId = UserId {unUserId :: UUID}
+  deriving (Show, Eq, Generic)
 
-newtype Username = Username { unUsername :: Text } deriving Show
+instance ToJSON UserId -- generated via Generic
+instance FromJSON UserId -- generated via Generic
 
-newtype RefreshToken = RefreshToken { unRefreshToken :: ByteString } deriving Show
+newtype Username = Username { unUsername :: Text }
+  deriving Show
 
-newtype Jwt = Jwt { unJwt :: ByteString } deriving Show
+newtype RefreshToken = RefreshToken { unRefreshToken :: ByteString }
+  deriving Show
 
-newtype Password = Password { unPassword :: ByteString } deriving (Show, Eq)
+newtype Jwt = Jwt { unJwt :: ByteString }
+  deriving Show
 
-newtype PasswordHash = PasswordHash { unPasswordHash :: Text } deriving (Show, Eq)
+newtype Password = Password { unPassword :: ByteString }
+  deriving (Show, Eq)
 
-newtype SessionToken = SessionToken { unSessionToken :: Text } deriving (Show, Eq)
+newtype PasswordHash = PasswordHash { unPasswordHash :: Text }
+  deriving (Show, Eq)
 
-newtype Household  = Household { unHousehold :: Text } deriving (Show, Eq)
+newtype SessionToken = SessionToken { unSessionToken :: Text }
+  deriving (Show, Eq)
 
-newtype HouseholdId  = HouseholdId { unHouseholdId :: Int32 } deriving (Show, Eq)
+newtype HouseholdId  = HouseholdId { unHouseholdId :: UUID }
+  deriving (Show, Eq)
+
+data Household  = Household
+  { id' :: HouseholdId
+  , name :: Text
+  } deriving (Show, Eq)

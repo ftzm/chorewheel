@@ -7,7 +7,7 @@ module Chore where
 import Data.Time.Clock
 import Data.Time.Calendar
 import Data.Text
-import Data.Int (Int32)
+import Data.UUID
 
 -------------------------------------------------------------------------------
 -- | Represents a period of time. The first date is guaranteed to be before the
@@ -19,10 +19,11 @@ data Resolution
   | Cancelled UTCTime
   | Rescheduled UTCTime
 
-newtype ChoreId = ChoreId { unChoreId :: Int32} deriving (Eq, Show)
+newtype ChoreId = ChoreId { unChoreId :: UUID} deriving (Eq, Show)
 
 data Chore = Chore
-  { _name :: Text
+  { id' :: ChoreId
+  , name :: Text
   } deriving (Eq, Show)
 
 data ChoreEvent

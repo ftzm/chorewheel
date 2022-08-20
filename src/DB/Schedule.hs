@@ -34,8 +34,8 @@ insertConstructor =
     ScheduleId
     [singletonStatement|
     insert into schedule (chore_id, "type")
-    values ($1 :: int4, $2 :: text)
-    returning id :: int4 |]
+    values ($1 :: uuid, $2 :: text)
+    returning id :: uuid |]
   where
     toName = \case
       FlexDaysSS _ -> "flex_days"
@@ -49,7 +49,7 @@ insertFlexDays =
     (\(ScheduleId i, FlexDaysState (FlexDays n) d) -> (i, fromIntegral n, d))
     [resultlessStatement|
     insert into flex_days (id, days, scheduled)
-    values ($1 :: int4, $2 :: int4, $3 :: date) |]
+    values ($1 :: uuid, $2 :: int4, $3 :: date) |]
 
 insertStrictDays :: Statement (ScheduleId, StrictDaysState) ()
 insertStrictDays =
@@ -57,7 +57,7 @@ insertStrictDays =
     (\(ScheduleId i, StrictDaysState (StrictDays n) d) -> (i, fromIntegral n, d))
     [resultlessStatement|
     insert into strict_days (id, days, scheduled)
-    values ($1 :: int4, $2 :: int4, $3 :: date) |]
+    values ($1 :: uuid, $2 :: int4, $3 :: date) |]
 
 insertWeeklyPatternMain :: Statement (ScheduleId, WeeklyPatternState) ()
 insertWeeklyPatternMain =
@@ -67,7 +67,7 @@ insertWeeklyPatternMain =
       ) -> (i, fromIntegral _iterations, fromIntegral _index, _day))
     [resultlessStatement|
     insert into weekly_pattern (id, iterations, elem_index, scheduled)
-    values ($1 :: int4, $2 :: int4, $3 :: int4, $4 :: date) |]
+    values ($1 :: uuid, $2 :: int4, $3 :: int4, $4 :: date) |]
 
 insertWeeklyPatternElems :: Statement (V.Vector (ScheduleId, Int, Weekday)) ()
 insertWeeklyPatternElems = Statement sql encoder Decoders.noResult True
@@ -83,7 +83,7 @@ insertWeeklyPatternElems = Statement sql encoder Decoders.noResult True
         . Encoders.element
         . Encoders.nonNullable
     encoder = contramap V.unzip3 $ contrazip3
-      (vector $ unScheduleId >$< Encoders.int4)
+      (vector $ unScheduleId >$< Encoders.uuid)
       (vector $ fromIntegral >$< Encoders.int4)
       (vector $ fromIntegral . fromEnum >$< Encoders.int4)
 
@@ -103,7 +103,7 @@ insertMonthlyPatternMain =
       ) -> (i, fromIntegral _iterations, fromIntegral _index, _day))
     [resultlessStatement|
     insert into monthly_pattern (id, iterations, elem_index, scheduled)
-    values ($1 :: int4, $2 :: int4, $3 :: int4, $4 :: date) |]
+    values ($1 :: uuid, $2 :: int4, $3 :: int4, $4 :: date) |]
 
 insertMonthlyPatternElems
   :: Statement (V.Vector (ScheduleId, Int, DayOfMonth)) ()
@@ -120,7 +120,7 @@ insertMonthlyPatternElems = Statement sql encoder Decoders.noResult True
         . Encoders.element
         . Encoders.nonNullable
     encoder = contramap V.unzip3 $ contrazip3
-      (vector $ unScheduleId >$< Encoders.int4)
+      (vector $ unScheduleId >$< Encoders.uuid)
       (vector $ fromIntegral >$< Encoders.int4)
       (vector $ fromIntegral . unDayOfMonth >$< Encoders.int4)
 
@@ -178,7 +178,7 @@ getSchedule =
       left join monthly_pattern_elem mpe on mp.id = mp.id
       group by mp.id, mpe.monthly_pattern_id
     ) mp_row on mp_row.id = s.id
-    where s.id = $1 :: int4 |]
+    where s.id = $1 :: uuid |]
   where
     decoder :: (
       Text,
@@ -212,4 +212,4 @@ getSchedule =
 deleteSchedule :: Statement ScheduleId ()
 deleteSchedule =
   lmap unScheduleId
-  [resultlessStatement| delete from schedule where id = $1 :: int4|]
+  [resultlessStatement| delete from schedule where id = $1 :: uuid|]
