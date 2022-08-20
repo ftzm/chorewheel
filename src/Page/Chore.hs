@@ -2,7 +2,6 @@ module Page.Chore where
 
 import Lucid
 import Lucid.Base
-import qualified Data.Text as T
 
 import Page.Attribute
 import Page.Common
@@ -25,7 +24,9 @@ addChore = form_ [hxPost_ "/create_chore"] $ do
   myInput [placeholder_ "Chore Name", name_ "choreName", xData_ "{}"]
   br_ []
   br_ []
-  mySelect [name_ "scheduleType", hxGet_ "/schedule_form", hxTarget_ "#schedule"]
+  mySelect [ name_ "scheduleType"
+           , hxGet_ "/schedule_form"
+           , hxTarget_ "#schedule"]
     [ ("unscheduled", "Unscheduled")
     , ("flex", "Flexible intervals")
     , ("strict", "Regular intervals")
@@ -53,7 +54,33 @@ createFlexForm = do
 
 --------------------
 
---id_ "oi", makeAttributes "hx-swap-oob" "true", method_ "post"
+adjuster
+  :: Text -- ^ target prefix
+  -> Text -- ^ add url
+  -> Text -- ^ remove url
+  -> Int
+  -> Html ()
+adjuster targetPrefix addUrlPrefix removeUrlPrefix count= do
+  case count of
+    1 -> myButton [ type_ "submit"
+                  , class_ "opacity-50 cursor-not-allowed"
+                  , disabled_ ""] "remove"
+    _ -> myButton [ type_ "submit"
+                  , hxGet_ removeUrl
+                  , hxTarget_ $ targetPrefix <> "-" <> show count
+                  , hxSwap_ "outerHTML"
+                  ] "remove"
+  myButton [ type_ "submit"
+           , hxGet_ addUrl
+           , hxTarget_ "#adjuster"
+           , hxSwap_ "outerHTML"
+           ] "add"
+  where
+    addUrl = addUrlPrefix <> show (count + 1)
+    removeUrl = removeUrlPrefix <> show count
+
+--------------------
+
 createWeeklyForm :: Int -> Html ()
 createWeeklyForm _ = do
   span_ [] "Create chore on a flexible repeating schedule."
@@ -61,16 +88,16 @@ createWeeklyForm _ = do
   div_ [id_ "adjuster"] $ weekAdjuster 1
 
 weekAdjuster :: Int -> Html ()
-weekAdjuster weekCount = do
-  case weekCount of
-    1 -> myButton [type_ "submit", class_ "opacity-50 cursor-not-allowed", disabled_ ""] "remove"
-    _ -> myButton [type_ "submit", hxGet_ (T.pack $ "/remove_week_row/" ++ show weekCount), hxTarget_ (T.pack $ "#week-" ++ show weekCount), hxSwap_ "outerHTML"] "remove"
-  myButton [type_ "submit", hxGet_ (T.pack $ "/add_week_row/" ++ show (weekCount + 1)), hxTarget_ "#adjuster", hxSwap_ "outerHTML"] "add"
-
+weekAdjuster = adjuster "#week" "/add_week_row/" "/remove_week_row/"
 
 weekRow :: Int -> Html ()
 weekRow i =
-  ul_ [id_ $ "week-" <> T.pack (show i)] $ li_ $ mconcat $ map (\j -> input_ [class_ "mr-1", type_ "checkbox", name_ "days", value_ (T.pack $ show i ++ "-" ++ show j)]) [1..7]
+  ul_ [ id_ $ "week-" <> show i] $ li_ $ mconcat $ map weekDay [1..7]
+  where weekDay day = input_ [ class_ "mr-1"
+                             , type_ "checkbox"
+                             , name_ "days"
+                             , value_ $ show i <> "-" <> show day
+                             ]
 
 addWeekRow :: Int -> Html ()
 addWeekRow newRow = do
@@ -79,8 +106,9 @@ addWeekRow newRow = do
 
 removeWeekRow :: Int -> Html ()
 removeWeekRow targetRow = do
-  div_ [id_ "adjuster", makeAttributes "hx-swap-oob" "true"] $ weekAdjuster (targetRow - 1)
-
+  div_ [ id_ "adjuster"
+       , makeAttributes "hx-swap-oob" "true"
+       ] $ weekAdjuster (targetRow - 1)
 
 -----------
 
@@ -100,8 +128,8 @@ monthDay monthIndex dayIndex =
            ]
     span_ [class_ labelClasses] labelText
   where
-    labelText = toHtml $ T.pack $ show dayIndex
-    inputValue = T.pack $ show monthIndex ++ "-" ++ show dayIndex
+    labelText = toHtml @Text $ show dayIndex
+    inputValue = show monthIndex <> "-" <> show dayIndex
     labelClasses = unwords
       [ "mr-1"
       , "mt-1"
@@ -118,30 +146,13 @@ monthDay monthIndex dayIndex =
 
 monthRow :: Int -> Html ()
 monthRow i = div_ [ id_ rowId, class_ "mb-2"] $ do
-  span_ $ toHtml $ T.pack $ "Month " ++ show i
+  span_ $ toHtml @Text $ "Month " <> show i
   mconcat $ map (ul_ . mconcat) $ chunks 7 $ map (monthDay i) [1..31]
   where
-    rowId = T.pack $ "month-" ++ show i
+    rowId = "month-" <> show i
 
 monthAdjuster :: Int -> Html ()
-monthAdjuster count = do
-  case count of
-    1 -> myButton [ type_ "submit"
-                  , class_ "opacity-50 cursor-not-allowed"
-                  , disabled_ ""] "remove"
-    _ -> myButton [ type_ "submit"
-                  , hxGet_ removeUrl
-                  , hxTarget_ (T.pack $ "#month-" ++ show count)
-                  , hxSwap_ "outerHTML"
-                  ] "remove"
-  myButton [ type_ "submit"
-           , hxGet_ addUrl
-           , hxTarget_ "#adjuster"
-           , hxSwap_ "outerHTML"
-           ] "add"
-  where
-    addUrl = T.pack $ "/add_month_row/" ++ show (count + 1)
-    removeUrl = T.pack $ "/remove_month_row/" ++ show count
+monthAdjuster = adjuster "#month" "/add_month_row/" "/remove_month_row/"
 
 addMonthRow :: Int -> Html ()
 addMonthRow newRow = do

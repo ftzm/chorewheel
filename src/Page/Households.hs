@@ -2,7 +2,6 @@ module Page.Households where
 
 import Lucid
 -- import Lucid.Base
-import qualified Data.Text as T
 --
 -- import Servant.Links
 -- import Routes.Root
@@ -19,7 +18,7 @@ householdsFragment households =
     hs -> mconcat $ flip map hs $ \Household{..} -> do
       li_ [class_ "m-2"] $ do
         span_ [class_ "mr-2"] $ toHtml name
-        myButton [ hxPost_ $ T.pack $ "/household-leave/" ++ show id'
+        myButton [ hxPost_ $ "/household-leave/" <> show id'
                 , hxTarget_ "#households"
                 ] "Leave"
 

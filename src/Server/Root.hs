@@ -5,7 +5,6 @@ import Servant.Server.Generic
 import Servant.Server.StaticFiles
 import Lucid
 import Control.Monad.Error.Class
-import qualified Data.Text as T
 import qualified Data.Set as S
 import Data.UUID
 
@@ -45,11 +44,10 @@ choreWheelApi = ChoreWheelApi
   , _removeWeekRow = removeWeekRowHandler
   , _addMonthRow = addMonthRowHandler
   , _removeMonthRow = removeMonthRowHandler
-  , _createChore = \_ input -> return $ toHtml $ T.pack $ show input
+  , _createChore = \_ input -> return $ toHtml @Text $ show input
   , _landing = landingHandler
   , _static = serveDirectoryWebApp "static"
   }
-
 
 loginHandler
   :: MonadError ServerError m
