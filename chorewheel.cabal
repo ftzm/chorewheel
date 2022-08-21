@@ -95,6 +95,7 @@ library
     , monad-control
     , monad-logger
     , mtl
+    , nonempty-containers
     , process
     , profunctors
     , raw-strings-qq
@@ -163,6 +164,7 @@ executable chorewheel-exe
     , monad-control
     , monad-logger
     , mtl
+    , nonempty-containers
     , process
     , profunctors
     , raw-strings-qq
@@ -268,6 +270,7 @@ test-suite spec
     , monad-control
     , monad-logger
     , mtl
+    , nonempty-containers
     , process
     , profunctors
     , raw-strings-qq

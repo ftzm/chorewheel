@@ -48,6 +48,7 @@ dependencies:
 - monad-control
 - monad-logger
 - mtl
+- nonempty-containers
 - profunctors
 - raw-strings-qq
 - name: relude

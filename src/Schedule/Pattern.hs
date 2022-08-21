@@ -6,18 +6,15 @@ module Schedule.Pattern
   --) where
   where
 
-import Prelude hiding (head)
-import Data.Set (elemAt, size)
+import Data.Set.NonEmpty (NESet, size, elemAt)
 import Data.Time.Calendar hiding (DayOfMonth)
 import Schedule.Primitives
---todo: unfuck
-import Data.List (head)
 
 data Pattern a = Pattern
   -- ^ set of (iteration index, position in iteration)
-  { _elems :: Set (Int, a)
+  { elems :: NESet (Int, a)
   -- ^ size of iteration (week/month)
-  , _iterations :: Int
+  , iterations :: Int
   } deriving (Eq, Show)
 
 type WeeklyPattern = Pattern Weekday
@@ -28,8 +25,8 @@ type WeeklyPatternState = PatternState Weekday
 type MonthlyPatternState = PatternState DayOfMonth
 
 data PatternPosition = PatternPosition
-  { _day :: Day
-  , _index :: Int
+  { day :: Day
+  , index :: Int
   } deriving (Eq, Show)
 
 data PatternStateError
@@ -57,7 +54,7 @@ dupe x = (x, x)
 
 -------------------------------------------------------------------------------
 
-elemAtEither :: Int -> Set a -> Either PatternStateError a
+elemAtEither :: Int -> NESet a -> Either PatternStateError a
 elemAtEither index set =
   if index < size set
   then Right $ elemAt index set
@@ -71,7 +68,7 @@ validatePatternState
   -> Either PatternStateError (PatternState a)
 validatePatternState f pat@Pattern{..} pos@PatternPosition {..} =
   bool (Left DayInvalid) (Right $ PatternState pat pos) .
-  (f _day ==) . snd =<< elemAtEither _index _elems
+  (f day ==) . snd =<< elemAtEither index elems
 
 validateWeeklyState
   :: WeeklyPattern
@@ -92,8 +89,8 @@ nextPosition
 nextPosition f (PatternState pat@Pattern{..} (PatternPosition {..})) =
   PatternState pat $ PatternPosition nextDay nextIndex
   where
-    nextIndex = if _index == size _elems - 1 then 0 else _index + 1
-    nextDay = f _day (elemAt _index _elems) (elemAt nextIndex _elems)
+    nextIndex = if index == size elems - 1 then 0 else index + 1
+    nextDay = f day (elemAt index elems) (elemAt nextIndex elems)
 
 nextPositionWeekly :: WeeklyPatternState -> WeeklyPatternState
 nextPositionWeekly = nextPosition nextWeekDay
@@ -113,17 +110,18 @@ nextDaysMonthly = nextDays nextPositionMonthly
 
 nextEligibleDay
   :: Eq a
-  => (Day -> a)
-  -> Pattern a
-  -> Int
-  -> Day
+  => (Day -> a) -- ^ The function to make days pattern-comparable
+  -> Pattern a -- ^ The pattern
+  -> Int -- ^ Current index in the pattern
+  -> Day -- ^ Day to start searching from
   -> Either PatternStateError (PatternState a)
-nextEligibleDay f p@Pattern{_elems} i d =
-  constr . findDay <$> elemM
+nextEligibleDay f p@Pattern{elems} i d =
+  constr . findDay <$> elemAtEither i elems
   where
-    elemM = elemAtEither i _elems
     constr = PatternState p . flip PatternPosition i
-    findDay (_,a) = head $ filter ((a==) . f) [d..]
+    findDay (_,a) = (viaNonEmpty head $ filter ((a==) . f) [d..]) & \case
+      Just x -> x
+      Nothing -> error "Impossible: no eligible next day found."
 
 nextEligibleDayWeekly
   :: WeeklyPattern
