@@ -6,9 +6,8 @@ import Lucid.Base
 import Page.Attribute
 import Page.Common
 import Chore
-import Schedule
 
-choresPage :: [(Chore, ScheduleState)] -> Html ()
+choresPage :: [Chore] -> Html ()
 choresPage chores = container "chores " $ do
   case chores of
     [] -> span_ "This household has no chores :("

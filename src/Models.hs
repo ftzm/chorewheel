@@ -1,9 +1,13 @@
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE OverloadedLabels #-}
 
 module Models where
 
-
 import Servant.Auth.Server
+
+--import Data.Generics.Internal.VL.Lens
+import Data.Generics.Labels()
 
 import Data.Aeson
 import Data.UUID
@@ -78,4 +82,17 @@ newtype HouseholdId  = HouseholdId { unHouseholdId :: UUID }
 data Household  = Household
   { id' :: HouseholdId
   , name :: Text
-  } deriving (Show, Eq)
+  } deriving (Show, Eq, Generic)
+
+data Clash = Clash {
+  name :: Text
+                   }
+
+-- h :: Household
+-- h = Household (HouseholdId nil) "house"
+--
+-- y :: Text
+-- y = h ^. #name
+--
+-- z :: Household
+-- z = h & #name .~ "this"

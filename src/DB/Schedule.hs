@@ -7,17 +7,18 @@ module DB.Schedule where
 import Chore
 import Contravariant.Extras.Contrazip
 import Data.Profunctor (dimap, lmap)
-import qualified Data.Set as Set
 import qualified Data.Vector as V
 import qualified Hasql.Decoders as Decoders
 import qualified Hasql.Encoders as Encoders
 import qualified Hasql.Session as Session
 import Hasql.Statement (Statement (..))
 import Hasql.TH
+import qualified Data.Set.NonEmpty as NESet
+
 import Schedule
 import Schedule.Pattern
 import Schedule.Primitives
-
+import DB.Util
 
 insertConstructor :: Statement (ChoreId, ScheduleState) ScheduleId
 insertConstructor =
@@ -55,8 +56,8 @@ insertWeeklyPatternMain :: Statement (ScheduleId, WeeklyPatternState) ()
 insertWeeklyPatternMain =
   lmap
     (\( ScheduleId i
-      , PatternState (Pattern {_iterations}) (PatternPosition {_day, _index})
-      ) -> (i, fromIntegral _iterations, fromIntegral _index, _day))
+      , PatternState (Pattern {iterations}) (PatternPosition {day, index})
+      ) -> (i, fromIntegral iterations, fromIntegral index, day))
     [resultlessStatement|
     insert into weekly_pattern (id, iterations, elem_index, scheduled)
     values ($1 :: uuid, $2 :: int4, $3 :: int4, $4 :: date) |]
@@ -80,19 +81,19 @@ insertWeeklyPatternElems = Statement sql encoder Decoders.noResult True
       (vector $ fromIntegral . fromEnum >$< Encoders.int4)
 
 insertWeeklyPattern :: (ScheduleId, WeeklyPatternState) -> Session.Session ()
-insertWeeklyPattern args@(s, PatternState Pattern {_elems} _) = do
+insertWeeklyPattern args@(s, PatternState Pattern {elems} _) = do
   Session.statement args insertWeeklyPatternMain
   flip Session.statement insertWeeklyPatternElems
     $ V.fromList
     $ map (\(i, d) -> (s, i, d))
-    $ Set.toList _elems
+    $ toList elems
 
 insertMonthlyPatternMain :: Statement (ScheduleId, MonthlyPatternState) ()
 insertMonthlyPatternMain =
   lmap
     (\( ScheduleId i
-      , PatternState (Pattern {_iterations}) (PatternPosition {_day, _index})
-      ) -> (i, fromIntegral _iterations, fromIntegral _index, _day))
+      , PatternState (Pattern {iterations}) (PatternPosition {day, index})
+      ) -> (i, fromIntegral iterations, fromIntegral index, day))
     [resultlessStatement|
     insert into monthly_pattern (id, iterations, elem_index, scheduled)
     values ($1 :: uuid, $2 :: int4, $3 :: int4, $4 :: date) |]
@@ -117,12 +118,12 @@ insertMonthlyPatternElems = Statement sql encoder Decoders.noResult True
       (vector $ fromIntegral . unDayOfMonth >$< Encoders.int4)
 
 insertMonthlyPattern :: (ScheduleId, MonthlyPatternState) -> Session.Session ()
-insertMonthlyPattern args@(s, PatternState Pattern {_elems} _) = do
+insertMonthlyPattern args@(s, PatternState Pattern {elems} _) = do
   Session.statement args insertMonthlyPatternMain
   flip Session.statement insertMonthlyPatternElems
     $ V.fromList
     $ map (\(i, d) -> (s, i, d))
-    $ Set.toList _elems
+    $ toList $ NESet.toList elems
 
 insertSchedule :: (ChoreId, ScheduleState) -> Session.Session ScheduleId
 insertSchedule args@(_, s) = do
@@ -191,13 +192,13 @@ getSchedule =
       let
         elemIterations = map fromIntegral $ V.toList ei
         elemDays = map (toEnum . fromIntegral) $ V.toList ep
-        elems = Set.fromList $ zip elemIterations elemDays
+        elems = loadNESetUnsafe $ zip elemIterations elemDays
       in WeeklyPatternS $ Pattern elems $ fromIntegral i
     decoder ("monthly_pattern", _, _, _, _, _, Just i, Just ei, Just ep) =
       let
         elemIterations = map fromIntegral $ V.toList ei
         elemDays = map (DayOfMonth . fromIntegral) $ V.toList ep
-        elems = Set.fromList $ zip elemIterations elemDays
+        elems = loadNESetUnsafe $ zip elemIterations elemDays
       in MonthlyPatternS $ Pattern elems $ fromIntegral i
     decoder _ = error "impossible due to DB constraints"
 

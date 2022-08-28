@@ -33,6 +33,7 @@ library
       DB.Schedule
       DB.Session
       DB.User
+      DB.Util
       Effect.Auth.Jwt
       Effect.Auth.Password
       Effect.Auth.Session
@@ -71,6 +72,7 @@ library
       DerivingVia
       DuplicateRecordFields
       OverloadedRecordDot
+      KindSignatures
   ghc-options: -Wall -Werror -Wwarn=missing-home-modules -Wno-unused-do-bind -Wno-missing-home-modules -Wno-type-defaults -Wno-orphans
   build-depends:
       aeson
@@ -139,6 +141,7 @@ executable chorewheel-exe
       DerivingVia
       DuplicateRecordFields
       OverloadedRecordDot
+      KindSignatures
   ghc-options: -Wall -Werror -Wwarn=missing-home-modules -Wno-unused-do-bind -Wno-missing-home-modules -Wno-type-defaults -Wno-orphans -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       aeson
@@ -190,7 +193,7 @@ executable chorewheel-exe
   mixins:
       base hiding (Prelude)
     , relude (Relude as Prelude)
-  default-language: Haskell2010
+  default-language: GHC2021
 
 test-suite spec
   type: exitcode-stdio-1.0
@@ -208,6 +211,7 @@ test-suite spec
       DB.Schedule
       DB.Session
       DB.User
+      DB.Util
       Effect.Auth.Jwt
       Effect.Auth.Password
       Effect.Auth.Session
@@ -246,6 +250,7 @@ test-suite spec
       DerivingVia
       DuplicateRecordFields
       OverloadedRecordDot
+      KindSignatures
   ghc-options: -Wall -Werror -Wwarn=missing-home-modules -Wno-unused-do-bind -Wno-missing-home-modules -Wno-type-defaults -Wno-orphans
   build-depends:
       aeson
@@ -296,4 +301,4 @@ test-suite spec
   mixins:
       base hiding (Prelude)
     , relude (Relude as Prelude)
-  default-language: Haskell2010
+  default-language: GHC2021

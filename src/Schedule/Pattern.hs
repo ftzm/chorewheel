@@ -23,6 +23,8 @@ type MonthlyPattern = Pattern DayOfMonth
 data PatternState a = PatternState (Pattern a) PatternPosition deriving (Eq, Show)
 type WeeklyPatternState = PatternState Weekday
 type MonthlyPatternState = PatternState DayOfMonth
+getDay :: PatternState a -> Day
+getDay (PatternState _ pos') = pos'.day
 
 data PatternPosition = PatternPosition
   { day :: Day
@@ -33,18 +35,20 @@ data PatternStateError
   = IndexOutOfRange
   | DayInvalid
 
-nextWeekDay :: Day -> (Int, Weekday) -> (Int, Weekday) -> Day
-nextWeekDay startDay startElem nextElem =
+nextWeekDay :: Day -> Int -> (Int, Weekday) -> (Int, Weekday) -> Day
+nextWeekDay startDay iterations startElem nextElem =
   addDays (fromIntegral $ weekOffset + dayOffset) startDay
   where
-    weekOffset = 7 * (fst nextElem - fst startElem)
+    weekOffset | startElem <= nextElem =  7 * (fst nextElem - fst startElem)
+               | otherwise = 7 * (iterations + fst nextElem - fst startElem)
     dayOffset = fromEnum (snd nextElem) - fromEnum (snd startElem)
 
-nextMonthDay :: Day -> (Int, DayOfMonth) -> (Int, DayOfMonth) -> Day
-nextMonthDay startDay startElem nextElem =
+nextMonthDay :: Day -> Int -> (Int, DayOfMonth) -> (Int, DayOfMonth) -> Day
+nextMonthDay startDay iterations startElem nextElem =
   fromGregorian newYear newMonth newDay
   where
-    monthOffset = fst nextElem - fst startElem
+    monthOffset | startElem <= nextElem =  fst nextElem - fst startElem
+                | otherwise = iterations + fst nextElem - fst startElem
     newDay = unDayOfMonth $ snd nextElem
     (newYear, newMonth, _) =
       toGregorian $ addGregorianMonthsClip (fromIntegral monthOffset) startDay
@@ -83,14 +87,14 @@ validateMonthlyState
 validateMonthlyState = validatePatternState getDayOfMonth
 
 nextPosition
-  :: (Day -> (Int, a) -> (Int, a) -> Day)
+  :: (Day -> Int -> (Int, a) -> (Int, a) -> Day)
   -> PatternState a
   -> PatternState a
 nextPosition f (PatternState pat@Pattern{..} (PatternPosition {..})) =
   PatternState pat $ PatternPosition nextDay nextIndex
   where
     nextIndex = if index == size elems - 1 then 0 else index + 1
-    nextDay = f day (elemAt index elems) (elemAt nextIndex elems)
+    nextDay = f day iterations (elemAt index elems) (elemAt nextIndex elems)
 
 nextPositionWeekly :: WeeklyPatternState -> WeeklyPatternState
 nextPositionWeekly = nextPosition nextWeekDay
@@ -136,3 +140,21 @@ nextEligibleDayMonthly
   -> Day
   -> Either PatternStateError MonthlyPatternState
 nextEligibleDayMonthly = nextEligibleDay getDayOfMonth
+
+resolvePatternWeekly
+  :: WeeklyPatternState
+  -> Day
+  -> ([Day], Maybe WeeklyPatternState)
+resolvePatternWeekly p@(PatternState _ pos) day
+  | pos.day > day = ([], Nothing)
+  | otherwise = bimap (map getDay) (viaNonEmpty head)
+                $ span ((day>) . getDay) $ p : nextDaysWeekly p
+
+resolvePatternMonthly
+  :: MonthlyPatternState
+  -> Day
+  -> ([Day], Maybe MonthlyPatternState)
+resolvePatternMonthly p@(PatternState _ pos) day
+  | pos.day > day = ([], Nothing)
+  | otherwise = bimap (map getDay) (viaNonEmpty head)
+                $ span ((day>) . getDay) $ p : nextDaysMonthly p

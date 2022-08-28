@@ -105,6 +105,8 @@ executables:
   chorewheel-exe:
     main:                Main.hs
     source-dirs:         app
+    verbatim:
+      default-language: GHC2021
     ghc-options:
     - -threaded
     - -rtsopts
@@ -118,6 +120,8 @@ tests:
     source-dirs:
       - test
       - src
+    verbatim:
+      default-language: GHC2021
     dependencies:
       - tasty
       - tasty-hunit

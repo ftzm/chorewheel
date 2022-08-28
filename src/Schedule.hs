@@ -1,6 +1,6 @@
 module Schedule where
 
-import Data.Time.Calendar (Day)
+import Data.Time.Calendar (Day, addDays)
 import Data.UUID
 
 import Schedule.Pattern
@@ -40,6 +40,12 @@ data ScheduleState
   | MonthlyPatternSS MonthlyPatternState
    deriving (Eq, Show)
 
+scheduleStateDay :: ScheduleState -> Day
+scheduleStateDay (FlexDaysSS (FlexDaysState _ d)) = d
+scheduleStateDay (StrictDaysSS (StrictDaysState _ d)) = d
+scheduleStateDay (WeeklyPatternSS (PatternState _ PatternPosition {day})) = day
+scheduleStateDay (MonthlyPatternSS (PatternState _ PatternPosition {day})) = day
+
 -- data ScheduleStateUpdate
 --   = FlexDaysU Day
 --   | StrictDaysU Day
@@ -50,22 +56,31 @@ data ScheduleState
 -- updating. It may make sense to only have a scheduleState-like type where the
 -- state is optional
 
--- nextDaysFlex :: FlexDays -> Day -> [Day]
--- nextDaysFlex = undefined
---
--- nextDaysStrict :: StrictDays -> Day -> [Day]
--- nextDaysStrict = undefined
+nextDaysFlex :: FlexDaysState -> [FlexDaysState]
+nextDaysFlex =
+  unfoldr (\(FlexDaysState s@(FlexDays i) day) ->
+             Just $ dupe $ FlexDaysState s $ addDays (fromIntegral i) day)
 
--- updateNextScheduled :: ScheduleState -> Day -> ScheduleState
--- updateNextScheduled = undefined
+nextDaysStrict :: StrictDaysState -> [StrictDaysState]
+nextDaysStrict =
+  unfoldr (\(StrictDaysState s@(StrictDays i) day) ->
+             Just $ dupe $ StrictDaysState s $ addDays (fromIntegral i) day)
 
--- create = undefined
---
--- load = undefined
---
--- -- the tricky thing here is to update the pattern state/scheduled days where relevant.
--- update = undefined
---
--- nextDays = undefined
---
--- perform = undefined
+resolveFlexDays :: FlexDaysState -> Day -> ([Day], Maybe FlexDaysState)
+resolveFlexDays f@(FlexDaysState s@(FlexDays days) dayScheduled) dayResolved
+  | dayScheduled > dayResolved =
+    ([], Just $ FlexDaysState s $ addDays (fromIntegral days) dayResolved)
+  | otherwise =
+    ( takeWhile (dayResolved>) $ map getDayFlex $ f : nextDaysFlex f
+    , Just $ FlexDaysState s $ addDays (fromIntegral days) dayResolved
+    )
+  where
+    getDayFlex (FlexDaysState _ d) = d
+
+resolveStrictDays :: StrictDaysState -> Day -> ([Day], Maybe StrictDaysState)
+resolveStrictDays s'@(StrictDaysState _ dayScheduled) dayResolved
+  | dayScheduled > dayResolved = ([], Nothing)
+  | otherwise = bimap (map getDayStrict) (viaNonEmpty head)
+                $ span ((dayResolved>) . getDayStrict) $ s' : nextDaysStrict s'
+  where
+    getDayStrict (StrictDaysState _ d) = d
