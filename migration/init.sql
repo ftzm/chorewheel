@@ -66,10 +66,12 @@ CREATE TABLE IF NOT EXISTS chore (
 -- );
 
 CREATE TABLE IF NOT EXISTS chore_event (
+  --id UUID PRIMARY KEY,
   chore_id UUID NOT NULL,
   day DATE NOT NULL,
   type text NOT NULL,
 
+  PRIMARY KEY (chore_id, day),
   FOREIGN KEY (chore_id) REFERENCES chore
 );
 
@@ -84,13 +86,11 @@ CREATE TABLE IF NOT EXISTS chore_event (
 -- );
 
 CREATE TABLE IF NOT EXISTS schedule (
-  id    UUID  DEFAULT gen_random_uuid() NOT NULL,
-  chore_id UUID NOT NULL,
-  --type  schedule_constr   NOT NULL,
+  id UUID NOT NULL,
   type  text   NOT NULL,
 
   PRIMARY KEY (id, type),
-  FOREIGN KEY (chore_id) REFERENCES chore
+  FOREIGN KEY (id) REFERENCES chore
 );
 
 CREATE TABLE IF NOT EXISTS flex_days (

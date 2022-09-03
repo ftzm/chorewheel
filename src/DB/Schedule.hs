@@ -2,6 +2,7 @@
 
 module DB.Schedule where
 
+
 --import Data.Time.Calendar (Day)
 
 import Chore
@@ -20,13 +21,12 @@ import Schedule.Pattern
 import Schedule.Primitives
 import DB.Util
 
-insertConstructor :: Statement (ChoreId, ScheduleState) ScheduleId
+insertConstructor :: Statement (ChoreId, ScheduleState) ()
 insertConstructor =
-  dimap
+  lmap
     (bimap unChoreId toName)
-    ScheduleId
-    [singletonStatement|
-    insert into schedule (chore_id, "type")
+    [resultlessStatement|
+    insert into schedule (id, "type")
     values ($1 :: uuid, $2 :: text)
     returning id :: uuid |]
   where
@@ -36,33 +36,33 @@ insertConstructor =
       WeeklyPatternSS _ -> "weekly_pattern"
       MonthlyPatternSS _ -> "monthly_pattern"
 
-insertFlexDays :: Statement (ScheduleId, FlexDaysState) ()
+insertFlexDays :: Statement (ChoreId, FlexDaysState) ()
 insertFlexDays =
   lmap
-    (\(ScheduleId i, FlexDaysState (FlexDays n) d) -> (i, fromIntegral n, d))
+    (\(ChoreId i, FlexDaysState (FlexDays n) d) -> (i, fromIntegral n, d))
     [resultlessStatement|
     insert into flex_days (id, days, scheduled)
     values ($1 :: uuid, $2 :: int4, $3 :: date) |]
 
-insertStrictDays :: Statement (ScheduleId, StrictDaysState) ()
+insertStrictDays :: Statement (ChoreId, StrictDaysState) ()
 insertStrictDays =
   lmap
-    (\(ScheduleId i, StrictDaysState (StrictDays n) d) -> (i, fromIntegral n, d))
+    (\(ChoreId i, StrictDaysState (StrictDays n) d) -> (i, fromIntegral n, d))
     [resultlessStatement|
     insert into strict_days (id, days, scheduled)
     values ($1 :: uuid, $2 :: int4, $3 :: date) |]
 
-insertWeeklyPatternMain :: Statement (ScheduleId, WeeklyPatternState) ()
+insertWeeklyPatternMain :: Statement (ChoreId, WeeklyPatternState) ()
 insertWeeklyPatternMain =
   lmap
-    (\( ScheduleId i
+    (\( ChoreId i
       , PatternState (Pattern {iterations}) (PatternPosition {day, index})
       ) -> (i, fromIntegral iterations, fromIntegral index, day))
     [resultlessStatement|
     insert into weekly_pattern (id, iterations, elem_index, scheduled)
     values ($1 :: uuid, $2 :: int4, $3 :: int4, $4 :: date) |]
 
-insertWeeklyPatternElems :: Statement (V.Vector (ScheduleId, Int, Weekday)) ()
+insertWeeklyPatternElems :: Statement (V.Vector (ChoreId, Int, Weekday)) ()
 insertWeeklyPatternElems = Statement sql encoder Decoders.noResult True
   where
     sql =
@@ -76,11 +76,11 @@ insertWeeklyPatternElems = Statement sql encoder Decoders.noResult True
         . Encoders.element
         . Encoders.nonNullable
     encoder = contramap V.unzip3 $ contrazip3
-      (vector $ unScheduleId >$< Encoders.uuid)
+      (vector $ unChoreId >$< Encoders.uuid)
       (vector $ fromIntegral >$< Encoders.int4)
       (vector $ fromIntegral . fromEnum >$< Encoders.int4)
 
-insertWeeklyPattern :: (ScheduleId, WeeklyPatternState) -> Session.Session ()
+insertWeeklyPattern :: (ChoreId, WeeklyPatternState) -> Session.Session ()
 insertWeeklyPattern args@(s, PatternState Pattern {elems} _) = do
   Session.statement args insertWeeklyPatternMain
   flip Session.statement insertWeeklyPatternElems
@@ -88,10 +88,10 @@ insertWeeklyPattern args@(s, PatternState Pattern {elems} _) = do
     $ map (\(i, d) -> (s, i, d))
     $ toList elems
 
-insertMonthlyPatternMain :: Statement (ScheduleId, MonthlyPatternState) ()
+insertMonthlyPatternMain :: Statement (ChoreId, MonthlyPatternState) ()
 insertMonthlyPatternMain =
   lmap
-    (\( ScheduleId i
+    (\( ChoreId i
       , PatternState (Pattern {iterations}) (PatternPosition {day, index})
       ) -> (i, fromIntegral iterations, fromIntegral index, day))
     [resultlessStatement|
@@ -99,7 +99,7 @@ insertMonthlyPatternMain =
     values ($1 :: uuid, $2 :: int4, $3 :: int4, $4 :: date) |]
 
 insertMonthlyPatternElems
-  :: Statement (V.Vector (ScheduleId, Int, DayOfMonth)) ()
+  :: Statement (V.Vector (ChoreId, Int, DayOfMonth)) ()
 insertMonthlyPatternElems = Statement sql encoder Decoders.noResult True
   where
     sql =
@@ -113,11 +113,11 @@ insertMonthlyPatternElems = Statement sql encoder Decoders.noResult True
         . Encoders.element
         . Encoders.nonNullable
     encoder = contramap V.unzip3 $ contrazip3
-      (vector $ unScheduleId >$< Encoders.uuid)
+      (vector $ unChoreId >$< Encoders.uuid)
       (vector $ fromIntegral >$< Encoders.int4)
       (vector $ fromIntegral . unDayOfMonth >$< Encoders.int4)
 
-insertMonthlyPattern :: (ScheduleId, MonthlyPatternState) -> Session.Session ()
+insertMonthlyPattern :: (ChoreId, MonthlyPatternState) -> Session.Session ()
 insertMonthlyPattern args@(s, PatternState Pattern {elems} _) = do
   Session.statement args insertMonthlyPatternMain
   flip Session.statement insertMonthlyPatternElems
@@ -125,19 +125,18 @@ insertMonthlyPattern args@(s, PatternState Pattern {elems} _) = do
     $ map (\(i, d) -> (s, i, d))
     $ toList $ NESet.toList elems
 
-insertSchedule :: (ChoreId, ScheduleState) -> Session.Session ScheduleId
-insertSchedule args@(_, s) = do
-  scheduleId <- Session.statement args insertConstructor
+insertSchedule :: (ChoreId, ScheduleState) -> Session.Session ()
+insertSchedule args@(choreId, s) = do
+  Session.statement args insertConstructor
   case s of
-    FlexDaysSS x -> Session.statement (scheduleId, x) insertFlexDays
-    StrictDaysSS x -> Session.statement (scheduleId, x) insertStrictDays
-    WeeklyPatternSS x -> insertWeeklyPattern (scheduleId, x)
-    MonthlyPatternSS x -> insertMonthlyPattern (scheduleId, x)
-  return scheduleId
+    FlexDaysSS x -> Session.statement (choreId, x) insertFlexDays
+    StrictDaysSS x -> Session.statement (choreId, x) insertStrictDays
+    WeeklyPatternSS x -> insertWeeklyPattern (choreId, x)
+    MonthlyPatternSS x -> insertMonthlyPattern (choreId, x)
 
-getSchedule :: Statement ScheduleId Schedule
+getSchedule :: Statement ChoreId Schedule
 getSchedule =
-  dimap unScheduleId decoder [singletonStatement|
+  dimap unChoreId decoder [singletonStatement|
     select
       s.type :: text,
       fd.days :: int4?,
@@ -202,7 +201,13 @@ getSchedule =
       in MonthlyPatternS $ Pattern elems $ fromIntegral i
     decoder _ = error "impossible due to DB constraints"
 
-deleteSchedule :: Statement ScheduleId ()
+deleteSchedule :: Statement ChoreId ()
 deleteSchedule =
-  lmap unScheduleId
+  lmap unChoreId
   [resultlessStatement| delete from schedule where id = $1 :: uuid|]
+
+-------------------------------------------------------------------------
+
+updateSchedule :: (ChoreId, ScheduleState) -> Session.Session ()
+updateSchedule args@(choreId, _) =
+  Session.statement choreId deleteSchedule >> insertSchedule args

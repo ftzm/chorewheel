@@ -10,31 +10,11 @@ import Data.Generics.Internal.VL.Lens
 import Data.Generics.Labels() --instance declarations
 
 import Schedule
-import Schedule.Pattern
 
 -------------------------------------------------------------------------------
 -- | Represents a period of time. The first date is guaranteed to be before the
 -- second date.
 newtype Period = UTCTime UTCTime
-
-data ResolutionError
-  = InvalidDay
-  deriving (Eq, Show)
-
-data ResolutionType
-  -- Complete task, self-explanatory.
-  = Completed
-  -- record originally scheduled day that was deliberately skipped, causing the
-  -- task to be scheduled in the future as though it was completed.
-  | Skipped
-  -- record originally scheduled day that was passed
-  | Lapsed
-  deriving (Eq, Show)
-
-data Resolution = Resolution
-  { day :: Day
-  , resolutionType :: ResolutionType
-  } deriving (Eq, Show)
 
 newtype ChoreId = ChoreId { unChoreId :: UUID} deriving (Eq, Show)
 
@@ -71,22 +51,10 @@ doChore
   :: Chore
   -> Resolution
   -> Either ResolutionError ([Resolution], Chore)
-doChore c@Chore {..} resolution
-  | maybe False ((>= resolution.day) . (.day)) lastResolution = Left InvalidDay
-  | otherwise =
-    let
-      (lapsedDays, nextScheduleState) =
-        case schedule of
-          FlexDaysSS s ->
-            fmap FlexDaysSS <$> resolveFlexDays s resolution.day
-          StrictDaysSS s ->
-            fmap StrictDaysSS <$> resolveStrictDays s resolution.day
-          WeeklyPatternSS s ->
-            fmap WeeklyPatternSS <$> resolvePatternWeekly s resolution.day
-          MonthlyPatternSS s ->
-            fmap MonthlyPatternSS <$> resolvePatternMonthly s resolution.day
-      lapses = map (flip Resolution Lapsed) lapsedDays
-      updatedScheduleState = fromMaybe schedule nextScheduleState
-      nextChore =
-        c & #schedule .~ updatedScheduleState & #lastResolution .~ Just resolution
-    in Right (lapses ++ [resolution], nextChore)
+doChore c@Chore {..} resolution =
+  resolveSchedule schedule ((.day) <$> lastResolution) resolution <&>
+    \(resolutions, nextScheduleState) ->
+      ( resolutions
+      , c & #schedule .~ nextScheduleState
+          & #lastResolution .~ (Just resolution)
+      )

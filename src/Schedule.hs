@@ -1,14 +1,32 @@
-module Schedule where
+{-# LANGUAGE PatternSynonyms #-}
+
+module Schedule
+  ( Schedule (..)
+  , ScheduleState (..)
+  , ResolutionType (..)
+  , Resolution (..)
+  , ResolutionError (..)
+  , FlexDaysState (..)
+  , FlexDays (..)
+  , StrictDaysState (..)
+  , StrictDays (..)
+  , resolveSchedule
+  , PosNeg (..)
+  , pattern Smarter
+  , nonneg
+  , pattern Right1
+  ) where
 
 import Data.Time.Calendar (Day, addDays)
-import Data.UUID
 
 import Schedule.Pattern
-
-newtype ScheduleId = ScheduleId {unScheduleId :: UUID}
+import Schedule.Primitives
 
 -- | Schedule next task n days since the task was completed, even if late.
 newtype FlexDays = FlexDays { unFlexDays :: Int } deriving (Eq, Show)
+
+-- mkFlexDays :: Int -> FlexDays
+-- mkFlexDays = undefined
 
 -- | Schedule tasks n days apart.
 newtype StrictDays = StrictDays { unStrictDays :: Int } deriving (Eq, Show)
@@ -26,6 +44,26 @@ data FlexDaysState = FlexDaysState FlexDays Day
 data StrictDaysState = StrictDaysState StrictDays Day
    deriving (Eq, Show)
 
+
+data ResolutionError
+  = InvalidDay
+  deriving (Eq, Show)
+
+data ResolutionType
+  -- Complete task, self-explanatory.
+  = Completed
+  -- record originally scheduled day that was deliberately skipped, causing the
+  -- task to be scheduled in the future as though it was completed.
+  | Skipped
+  -- record originally scheduled day that was passed
+  | Lapsed
+  deriving (Eq, Show, Read)
+
+data Resolution = Resolution
+  { day :: Day
+  , resolutionType :: ResolutionType
+  } deriving (Eq, Show)
+
 data ScheduleState
   -- ^ Schedule next task n days since the task was completed, even if late.
   -- Next scheduled day not needed because we just count from the last
@@ -40,11 +78,11 @@ data ScheduleState
   | MonthlyPatternSS MonthlyPatternState
    deriving (Eq, Show)
 
-scheduleStateDay :: ScheduleState -> Day
-scheduleStateDay (FlexDaysSS (FlexDaysState _ d)) = d
-scheduleStateDay (StrictDaysSS (StrictDaysState _ d)) = d
-scheduleStateDay (WeeklyPatternSS (PatternState _ PatternPosition {day})) = day
-scheduleStateDay (MonthlyPatternSS (PatternState _ PatternPosition {day})) = day
+-- scheduleStateDay :: ScheduleState -> Day
+-- scheduleStateDay (FlexDaysSS (FlexDaysState _ d)) = d
+-- scheduleStateDay (StrictDaysSS (StrictDaysState _ d)) = d
+-- scheduleStateDay (WeeklyPatternSS (PatternState _ PatternPosition {day})) = day
+-- scheduleStateDay (MonthlyPatternSS (PatternState _ PatternPosition {day})) = day
 
 -- data ScheduleStateUpdate
 --   = FlexDaysU Day
@@ -84,3 +122,41 @@ resolveStrictDays s'@(StrictDaysState _ dayScheduled) dayResolved
                 $ span ((dayResolved>) . getDayStrict) $ s' : nextDaysStrict s'
   where
     getDayStrict (StrictDaysState _ d) = d
+
+resolveSchedule
+  :: ScheduleState
+  -> Maybe Day -- ^ Last resolved day
+  -> Resolution -- ^ The new resolution
+  -> Either ResolutionError ([Resolution], ScheduleState)
+resolveSchedule scheduleState lastResolved resolution
+  | maybe False (>= resolution.day) lastResolved = Left InvalidDay
+  | otherwise =
+    let
+      (lapsedDays, nextScheduleState) =
+        case scheduleState of
+          FlexDaysSS s ->
+            fmap FlexDaysSS <$> resolveFlexDays s resolution.day
+          StrictDaysSS s ->
+            fmap StrictDaysSS <$> resolveStrictDays s resolution.day
+          WeeklyPatternSS s ->
+            fmap WeeklyPatternSS <$> resolvePatternWeekly s resolution.day
+          MonthlyPatternSS s ->
+            fmap MonthlyPatternSS <$> resolvePatternMonthly s resolution.day
+      lapses = map (flip Resolution Lapsed) lapsedDays
+      updatedScheduleState = fromMaybe scheduleState nextScheduleState
+    in Right (lapses ++ [resolution], updatedScheduleState)
+
+---
+-- I could use pattern synonyms to hide the constructors
+
+data PosNeg = Pos Int | Neg Int
+
+pattern Smarter :: Int -> PosNeg
+pattern Smarter{ nonneg } <- Pos nonneg  where
+  Smarter x | x >= 0    = (Pos x)
+            | otherwise = (Neg x)
+
+pattern Right1 :: Int -> Either String Int
+pattern Right1 i <- Right i where
+  Right1 x | 1 == x = Right 1
+           | otherwise = Left "shit"

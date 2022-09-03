@@ -1,10 +1,17 @@
 module Schedule.Pattern
-  --( WeeklyPattern
-  --, MonthlyPattern
-  --, WeeklyPatternState
-  --, MonthlyPatternState
-  --) where
-  where
+  ( WeeklyPattern
+  , MonthlyPattern
+  , WeeklyPatternState
+  , MonthlyPatternState
+  , Pattern (..)
+  , PatternState (..)
+  , PatternPosition (..)
+  , resolvePatternWeekly
+  , resolvePatternMonthly
+  , nextEligibleDayWeekly
+  , nextEligibleDayMonthly
+  , PatternStateError (..)
+  ) where
 
 import Data.Set.NonEmpty (NESet, size, elemAt)
 import Data.Time.Calendar hiding (DayOfMonth)
@@ -16,15 +23,12 @@ data Pattern a = Pattern
   -- ^ size of iteration (week/month)
   , iterations :: Int
   } deriving (Eq, Show)
-
 type WeeklyPattern = Pattern Weekday
 type MonthlyPattern = Pattern DayOfMonth
 
 data PatternState a = PatternState (Pattern a) PatternPosition deriving (Eq, Show)
 type WeeklyPatternState = PatternState Weekday
 type MonthlyPatternState = PatternState DayOfMonth
-getDay :: PatternState a -> Day
-getDay (PatternState _ pos') = pos'.day
 
 data PatternPosition = PatternPosition
   { day :: Day
@@ -34,6 +38,20 @@ data PatternPosition = PatternPosition
 data PatternStateError
   = IndexOutOfRange
   | DayInvalid
+
+-- mkWeeklyPatternState
+--   :: Int
+--   -> [(Int, Int)]
+--   -> Int
+--   -> Day
+--   -> Either PatternStateError WeeklyPatternState
+-- mkWeeklyPatternState = undefined
+--
+-- unWeeklyPatternState :: WeeklyPatternState -> (Int,  [(Int, Int)], Int, Day)
+-- unWeeklyPatternState = undefined
+
+getDay :: PatternState a -> Day
+getDay (PatternState _ pos') = pos'.day
 
 nextWeekDay :: Day -> Int -> (Int, Weekday) -> (Int, Weekday) -> Day
 nextWeekDay startDay iterations startElem nextElem =
@@ -53,9 +71,6 @@ nextMonthDay startDay iterations startElem nextElem =
     (newYear, newMonth, _) =
       toGregorian $ addGregorianMonthsClip (fromIntegral monthOffset) startDay
 
-dupe :: a -> (a, a)
-dupe x = (x, x)
-
 -------------------------------------------------------------------------------
 
 elemAtEither :: Int -> NESet a -> Either PatternStateError a
@@ -64,27 +79,27 @@ elemAtEither index set =
   then Right $ elemAt index set
   else Left IndexOutOfRange
 
-validatePatternState
-  :: Eq a
-  => (Day -> a)
-  -> Pattern a
-  -> PatternPosition
-  -> Either PatternStateError (PatternState a)
-validatePatternState f pat@Pattern{..} pos@PatternPosition {..} =
-  bool (Left DayInvalid) (Right $ PatternState pat pos) .
-  (f day ==) . snd =<< elemAtEither index elems
-
-validateWeeklyState
-  :: WeeklyPattern
-  -> PatternPosition
-  -> Either PatternStateError WeeklyPatternState
-validateWeeklyState = validatePatternState getWeekday
-
-validateMonthlyState
-  :: MonthlyPattern
-  -> PatternPosition
-  -> Either PatternStateError MonthlyPatternState
-validateMonthlyState = validatePatternState getDayOfMonth
+-- validatePatternState
+--   :: Eq a
+--   => (Day -> a)
+--   -> Pattern a
+--   -> PatternPosition
+--   -> Either PatternStateError (PatternState a)
+-- validatePatternState f pat@Pattern{..} pos@PatternPosition {..} =
+--   bool (Left DayInvalid) (Right $ PatternState pat pos) .
+--   (f day ==) . snd =<< elemAtEither index elems
+--
+-- validateWeeklyState
+--   :: WeeklyPattern
+--   -> PatternPosition
+--   -> Either PatternStateError WeeklyPatternState
+-- validateWeeklyState = validatePatternState getWeekday
+--
+-- validateMonthlyState
+--   :: MonthlyPattern
+--   -> PatternPosition
+--   -> Either PatternStateError MonthlyPatternState
+-- validateMonthlyState = validatePatternState getDayOfMonth
 
 nextPosition
   :: (Day -> Int -> (Int, a) -> (Int, a) -> Day)
@@ -104,7 +119,6 @@ nextPositionMonthly = nextPosition nextMonthDay
 
 nextDays :: (PatternState a -> PatternState a) -> PatternState a -> [PatternState a]
 nextDays f = unfoldr (Just . dupe . f)
-  --where getDay (PatternState _ p') = _day p'
 
 nextDaysWeekly :: WeeklyPatternState -> [WeeklyPatternState]
 nextDaysWeekly = nextDays nextPositionWeekly

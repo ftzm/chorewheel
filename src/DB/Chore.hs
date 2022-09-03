@@ -10,6 +10,10 @@ import Text.RawString.QQ
 import qualified Hasql.Encoders as E
 import qualified Hasql.Decoders as D
 import Data.Tuple.Sequence
+import Data.Text (unpack)
+import Text.Read
+import Contravariant.Extras.Contrazip
+import Data.Time.Calendar (Day)
 
 import Models
 import Chore
@@ -86,7 +90,7 @@ getFullChoresByHousehold = Statement sql encoder (D.rowVector rowDecoder) True
         (wp.iterations, wp.elem_iterations, wp.elem_points, wp.elem_index, wp.scheduled),
         (mp.iterations, mp.elem_iterations, mp.elem_points, mp.elem_index, mp.scheduled)
       from chore c
-      join schedule s on s.chore_id = c.id
+      join schedule s on s.id = c.id
       left join flex_days fd on fd.id = s.id
       left join strict_days sd on sd.id = s.id
       left join (
@@ -115,3 +119,50 @@ getFullChoresByHousehold = Statement sql encoder (D.rowVector rowDecoder) True
       ) mp on mp.id = s.id
       where c.household_id = $1 :: uuid
       |]
+
+insertChoreEvents
+  :: Statement (V.Vector (ChoreId, Resolution)) ()
+insertChoreEvents = Statement sql encoder D.noResult True
+  where
+    sql =
+      "insert into chore_event (chore_id, day, type)\
+      \select * from unnest ($1, $2, $3)"
+    vector =
+      E.param
+        . E.nonNullable
+        . E.array
+        . E.dimension V.foldl'
+        . E.element
+        . E.nonNullable
+    flatten = contramap (V.map (\(c, Resolution {..}) -> (c, day, resolutionType)))
+    encoder' = contramap V.unzip3 $ contrazip3
+      (vector $ unChoreId >$< E.uuid)
+      (vector $ E.date)
+      (vector $ show @Text @ResolutionType >$< E.text)
+    encoder = flatten encoder'
+
+
+getChoreEvents :: Statement ChoreId (V.Vector Resolution)
+getChoreEvents =
+  dimap unChoreId (V.map (\(d, t) -> Resolution d (read $ unpack t)))
+  [vectorStatement|
+  select day :: date, type :: text
+  from chore_event
+  where chore_id = $1 :: uuid|]
+
+-- Includes the last resolution before the range to be able to generate a
+-- complete history for the range (i.e. to be able to show if the first
+-- completion in the range was overdue)
+getChoreEventsFrom :: Statement (ChoreId, Day) (V.Vector Resolution)
+getChoreEventsFrom =
+  dimap (first unChoreId) (V.map (\(d, t) -> Resolution d (read $ unpack t)))
+  [vectorStatement|
+  select day :: date, type :: text
+  from chore_event
+  where chore_id = $1 :: uuid
+  and day >= (
+    select max(day)
+    from chore_event
+    where chore_id = $1 :: uuid
+    and day < $2 :: date
+  )|]

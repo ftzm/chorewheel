@@ -30,3 +30,6 @@ getDayOfMonth = DayOfMonth . (\(_, _, d) -> d ) . toGregorian
 -- zero indexed, unlike the time library
 getMonthInt :: Day -> Int
 getMonthInt = subtract 1 . (\(_, m, _) -> m ) . toGregorian
+
+dupe :: a -> (a, a)
+dupe x = (x, x)
