@@ -19,6 +19,7 @@ module Schedule
 
 import Data.Time.Calendar (Day, addDays)
 
+import Models
 import Schedule.Pattern
 import Schedule.Primitives
 
@@ -51,13 +52,13 @@ data ResolutionError
 
 data ResolutionType
   -- Complete task, self-explanatory.
-  = Completed
+  = Completed UserId
   -- record originally scheduled day that was deliberately skipped, causing the
   -- task to be scheduled in the future as though it was completed.
   | Skipped
   -- record originally scheduled day that was passed
   | Lapsed
-  deriving (Eq, Show, Read)
+  deriving (Eq, Show)
 
 data Resolution = Resolution
   { day :: Day

@@ -70,9 +70,24 @@ CREATE TABLE IF NOT EXISTS chore_event (
   chore_id UUID NOT NULL,
   day DATE NOT NULL,
   type text NOT NULL,
+  user_id UUID REFERENCES "user",
 
   PRIMARY KEY (chore_id, day),
   FOREIGN KEY (chore_id) REFERENCES chore
+);
+
+CREATE TABLE IF NOT EXISTS chore_participant_type (
+  chore_id UUID NOT NULL REFERENCES chore,
+  type text NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS chore_participant (
+  chore_id UUID NOT NULL REFERENCES chore,
+  user_id UUID NOT NULL REFERENCES "user",
+  type
+      text NOT NULL
+      DEFAULT 'some'
+      CHECK (type = 'some')
 );
 
 -------------------------------------------------------------------------------

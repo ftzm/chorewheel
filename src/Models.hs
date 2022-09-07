@@ -53,7 +53,7 @@ instance {-# OVERLAPPABLE #-}
   getUsers = lift getUsers
 
 newtype UserId = UserId {unUserId :: UUID}
-  deriving (Show, Eq, Generic)
+  deriving (Show, Eq, Ord, Generic)
 
 instance ToJSON UserId -- generated via Generic
 instance FromJSON UserId -- generated via Generic

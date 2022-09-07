@@ -38,6 +38,7 @@ import DB.Household
 import DB.Chore
 import DB.Schedule
 import DB.Util
+import Participants
 
 -------------------------------------------------------------------------------
 -- Test utils
@@ -247,10 +248,11 @@ unitTests runS pool = testGroup "Query Tests"
       today <- utctDay <$> liftIO getCurrentTime
 
       choreId <- ChoreId <$> liftIO nextRandom
+      userId <- UserId <$> liftIO nextRandom
       let flexScheduleState = FlexDaysSS $ FlexDaysState (FlexDays 2) today
-      let flexChore = Chore choreId "flex" flexScheduleState Nothing
-      let resolved1 = (length . fst) <$> (doChore flexChore $ Resolution (addDays 10 today) Completed)
-      let resolved2 = (length . fst) <$> (doChore flexChore $ Resolution today Completed)
+      let flexChore = Chore choreId "flex" flexScheduleState Nothing Everyone
+      let resolved1 = (length . fst) <$> (doChore flexChore $ Resolution (addDays 10 today) $ Completed userId)
+      let resolved2 = (length . fst) <$> (doChore flexChore $ Resolution today $ Completed userId)
       resolved1 @?= Right 6
       resolved2 @?= Right 1
 
@@ -258,15 +260,17 @@ unitTests runS pool = testGroup "Query Tests"
       today <- utctDay <$> liftIO getCurrentTime
 
       choreId <- ChoreId <$> liftIO nextRandom
+      userId <- UserId <$> liftIO nextRandom
       let strictScheduleState = StrictDaysSS $  StrictDaysState (StrictDays 2) today
-      let strictChore = Chore choreId "strict" strictScheduleState Nothing
-      let resolved1 = (length . fst) <$> (doChore strictChore $ Resolution (addDays 10 today) Completed)
-      let resolved2 = (length . fst) <$> (doChore strictChore $ Resolution today Completed)
+      let strictChore = Chore choreId "strict" strictScheduleState Nothing Everyone
+      let resolved1 = (length . fst) <$> (doChore strictChore $ Resolution (addDays 10 today) $ Completed userId)
+      let resolved2 = (length . fst) <$> (doChore strictChore $ Resolution today $ Completed userId)
       resolved1 @?= Right 6
       resolved2 @?= Right 1
 
   , testCase "resolve weekly chore" $ do
       today <- utctDay <$> liftIO getCurrentTime
+      userId <- UserId <$> liftIO nextRandom
 
       choreId <- ChoreId <$> liftIO nextRandom
       let patternDays = [(1, Mon), (1, Wed), (1, Fri), (2, Tue), (2, Thu)]
@@ -275,9 +279,9 @@ unitTests runS pool = testGroup "Query Tests"
       let startingScheduledDay = (\(PatternState _ pos) -> pos.day) startingPatternState
       let dayToComplete = addDays 14 startingScheduledDay
       let weeklyPatternState = WeeklyPatternSS startingPatternState
-      let chore = Chore choreId "weekly" weeklyPatternState Nothing
-      let output1 = (length . fst) <$> (doChore chore $ Resolution dayToComplete Completed)
-      let output2 = (length . fst) <$> (doChore chore $ Resolution startingScheduledDay Completed)
+      let chore = Chore choreId "weekly" weeklyPatternState Nothing Everyone
+      let output1 = (length . fst) <$> (doChore chore $ Resolution dayToComplete $ Completed userId)
+      let output2 = (length . fst) <$> (doChore chore $ Resolution startingScheduledDay $ Completed userId)
       output1 @?= Right 6
       output2 @?= Right 1
 
@@ -285,6 +289,7 @@ unitTests runS pool = testGroup "Query Tests"
       today <- utctDay <$> liftIO getCurrentTime
 
       choreId <- ChoreId <$> liftIO nextRandom
+      userId <- UserId <$> liftIO nextRandom
       let patternDays = [ (1, DayOfMonth 1)
                         , (1, DayOfMonth 15)
                         , (1, DayOfMonth 30)
@@ -296,31 +301,46 @@ unitTests runS pool = testGroup "Query Tests"
       let startingScheduledDay = (\(PatternState _ pos) -> pos.day) startingPatternState
       let dayToComplete = addDays 60 startingScheduledDay
       let weeklyPatternState = MonthlyPatternSS startingPatternState
-      let chore = Chore choreId "weekly" weeklyPatternState Nothing
-      let output1 = (length . fst) <$> (doChore chore $ Resolution dayToComplete Completed)
-      let output2 = (length . fst) <$> (doChore chore $ Resolution startingScheduledDay Completed)
+      let chore = Chore choreId "weekly" weeklyPatternState Nothing Everyone
+      let output1 = (length . fst) <$> (doChore chore $ Resolution dayToComplete $ Completed userId)
+      let output2 = (length . fst) <$> (doChore chore $ Resolution startingScheduledDay $ Completed userId)
       output1 @?= Right 6
       output2 @?= Right 1
   , testCase "resolution round trips" $ runS $ do
       today <- utctDay <$> liftIO getCurrentTime
       choreId <- ChoreId <$> liftIO nextRandom
+      userId <- UserId <$> liftIO nextRandom
+      Session.statement (User userId "test" "test") insertUser
       householdId <- HouseholdId <$> liftIO nextRandom
       Session.statement (Household householdId "home") insertHousehold
       Session.statement (householdId, choreId, "sweep") insertChore
-      let resolutions = V.fromList $ map ((choreId,) . flip Resolution Completed . flip addDays today) [0..5]
+      let resolutions = V.fromList $ map ((choreId,) . flip Resolution (Completed userId) . flip addDays today) [0..5]
       Session.statement resolutions insertChoreEvents
       output <- Session.statement choreId getChoreEvents
       liftIO $ output @?= V.map snd resolutions
   , testCase "getChoreEventsFrom" $ runS $ do
       today <- utctDay <$> liftIO getCurrentTime
       choreId <- ChoreId <$> liftIO nextRandom
+      userId <- UserId <$> liftIO nextRandom
+      Session.statement (User userId "test" "test") insertUser
       householdId <- HouseholdId <$> liftIO nextRandom
       Session.statement (Household householdId "home") insertHousehold
       Session.statement (householdId, choreId, "sweep") insertChore
-      let resolutions = V.fromList $ map ((choreId,) . flip Resolution Completed . flip addDays today) [0..5]
+      let resolutions = V.fromList $ map ((choreId,) . flip Resolution (Completed userId) . flip addDays today) [0..5]
       Session.statement resolutions insertChoreEvents
       output <- Session.statement (choreId, addDays 2 today) getChoreEventsFrom
       liftIO $ length output @?= 5
+  , testCase "choreParticipantsRoundTrip" $ runS $ do
+      householdId <- HouseholdId <$> liftIO nextRandom
+      choreId <- ChoreId <$> liftIO nextRandom
+      Session.statement (Household householdId "home") insertHousehold
+      Session.statement (householdId, choreId, "sweep") insertChore
+
+      let participants = Everyone
+
+      insertParticipants (choreId, participants)
+      output <- Session.statement choreId getChoreParticipants
+      liftIO $ output @?= participants
   ]
 
 -- patternTests :: TestTree

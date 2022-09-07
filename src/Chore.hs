@@ -10,6 +10,7 @@ import Data.Generics.Internal.VL.Lens
 import Data.Generics.Labels() --instance declarations
 
 import Schedule
+import Participants
 
 -------------------------------------------------------------------------------
 -- | Represents a period of time. The first date is guaranteed to be before the
@@ -23,6 +24,7 @@ data Chore = Chore
   , name :: Text
   , schedule :: ScheduleState
   , lastResolution :: Maybe Resolution
+  , participants :: Participants
   } deriving (Eq, Show, Generic)
 
 data ChoreEvent
