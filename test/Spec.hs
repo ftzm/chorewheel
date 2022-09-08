@@ -38,7 +38,9 @@ import DB.Household
 import DB.Chore
 import DB.Schedule
 import DB.Util
+import DB.SessionException()
 import Participants
+import Control.Monad.Catch
 
 -------------------------------------------------------------------------------
 -- Test utils
@@ -68,14 +70,10 @@ poolTransS pool input statement =
                     return output
 
 withRollback :: Pool.Pool -> Session.Session a -> IO a
-withRollback p s =
-  Pool.use p protectedSession >>= either (fail . show) return
+withRollback p s = Pool.use p protectedSession >>= either (fail . show) return
   where
-    protectedSession = do
-      Session.sql "BEGIN"
-      result <- catchError (Right <$> s) $ \e -> pure $ Left e
-      Session.sql "ROLLBACK"
-      either throwError return result
+    protectedSession =
+      bracket (Session.sql "BEGIN") (const $ Session.sql "ROLLBACK") (const s)
 
 rollBackOnError :: Pool.Pool -> Session.Session a -> IO a
 rollBackOnError p s =
@@ -317,7 +315,7 @@ unitTests runS pool = testGroup "Query Tests"
       let resolutions = V.fromList $ map ((choreId,) . flip Resolution (Completed userId) . flip addDays today) [0..5]
       Session.statement resolutions insertChoreEvents
       output <- Session.statement choreId getChoreEvents
-      liftIO $ output @?= V.map snd resolutions
+      liftIO $ output @?= (V.reverse $ V.map snd resolutions)
   , testCase "getChoreEventsFrom" $ runS $ do
       today <- utctDay <$> liftIO getCurrentTime
       choreId <- ChoreId <$> liftIO nextRandom

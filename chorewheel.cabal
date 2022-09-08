@@ -212,6 +212,7 @@ test-suite spec
       DB.Session
       DB.User
       DB.Util
+      DB.SessionException
       Effect.Auth.Jwt
       Effect.Auth.Password
       Effect.Auth.Session
