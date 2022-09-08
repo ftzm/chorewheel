@@ -102,6 +102,7 @@ library
     , profunctors
     , raw-strings-qq
     , relude >=1.1.0.0
+    , resourcet
     , resource-pool
     , servant >=0.19
     , servant-auth-server
@@ -173,6 +174,7 @@ executable chorewheel-exe
     , raw-strings-qq
     , relude >=1.1.0.0
     , resource-pool
+    , resourcet
     , servant >=0.19
     , servant-auth-server
     , servant-lucid

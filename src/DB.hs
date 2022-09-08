@@ -6,6 +6,7 @@ import qualified Hasql.Session as HS
 import Data.Generics.Product.Typed
 import qualified Data.ByteString as BS
 import Data.Text (pack)
+import Control.Monad.Trans.Resource
 
 type WithDb r m = (MonadReader r m, HasType HP.Pool r, MonadIO m)
 
@@ -43,3 +44,6 @@ runPool :: WithDb r m => HS.Session a -> m a
 runPool s = do
   pool <- asks $ getTyped @HP.Pool
   liftIO $ HP.use pool s >>= either (fail . show) return
+
+dbResource :: MonadResource m => m (HP.Pool)
+dbResource = snd <$> allocate createPool HP.release

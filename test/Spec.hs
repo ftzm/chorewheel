@@ -73,7 +73,7 @@ withRollback :: Pool.Pool -> Session.Session a -> IO a
 withRollback p s = Pool.use p protectedSession >>= either (fail . show) return
   where
     protectedSession =
-      bracket (Session.sql "BEGIN") (const $ Session.sql "ROLLBACK") (const s)
+      bracket_ (Session.sql "BEGIN") (Session.sql "ROLLBACK") s
 
 rollBackOnError :: Pool.Pool -> Session.Session a -> IO a
 rollBackOnError p s =

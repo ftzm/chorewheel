@@ -17,6 +17,9 @@ import Data.UUID.V4
 import App
 import Server.Root
 import DB
+import Control.Monad.Catch (catch)
+
+import Control.Monad.Trans.Resource
 
 createTestUser :: HP.Pool -> IO ()
 createTestUser p = do
@@ -29,7 +32,10 @@ createTestUser p = do
 -- TODO: Investigate how to use this to convert internal errors to servant errors
 appToHandler :: AppEnv -> App a -> Handler a
 appToHandler env (App m) = do
-  val <- liftIO $ runExceptT $ runReaderT m env
+  val <- catch (liftIO $ runExceptT $ runReaderT m env) $
+    -- Exception that pass this point are handled by WAI's default exception
+    -- handler configured in its settings.
+    (\(e :: SomeException) -> print "error" >> throwM e)
   case val of
     Left e -> throwError e
     Right s -> return s
@@ -41,9 +47,9 @@ choreWheelApp f = genericServeTWithContext f choreWheelApi ctx
     ctx = authHandler f :. EmptyContext
 
 runApp :: IO ()
-runApp = do
-  pool <- createPool
+runApp = runResourceT $ do
+  pool <- dbResource
   --createTestUser pool
-  jwtCfg <- defaultJWTSettings <$> generateKey
+  jwtCfg <- defaultJWTSettings <$> liftIO generateKey
   let env = AppEnv pool jwtCfg
-  run 8080 $ choreWheelApp $ appToHandler env
+  liftIO $ run 8080 $ choreWheelApp $ appToHandler env
