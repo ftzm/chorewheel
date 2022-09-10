@@ -22,6 +22,7 @@ import Page.Login
 import Page.Landing
 import Page.Households
 import Page.Chore
+import Log
 
 choreWheelApi
   :: MonadError ServerError m
@@ -29,6 +30,7 @@ choreWheelApi
   => UserM m
   => HouseholdM m
   => ChoreM m
+  => LogM m
   => ChoreWheelApi (AsServerT m)
 choreWheelApi = ChoreWheelApi
   { _ping = return "pong"

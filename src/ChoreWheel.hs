@@ -3,7 +3,6 @@ module ChoreWheel where
 import Network.Wai.Handler.Warp (run)
 import Servant.Server
 import Servant.Server.Generic
-import Servant.Auth.Server
 import           Control.Monad.Error.Class
 --
 import qualified Hasql.Pool as HP
@@ -13,6 +12,7 @@ import Effect.Auth.Password
 import DB.User
 import Models
 import Data.UUID.V4
+import Log
 
 import App
 import Server.Root
@@ -43,13 +43,16 @@ appToHandler env (App m) = do
 choreWheelApp :: (forall a. App a -> Handler a) -> Application
 choreWheelApp f = genericServeTWithContext f choreWheelApi ctx
   where
-    --ctx = defaultCookieSettings :. jwtCfg :. EmptyContext
     ctx = authHandler f :. EmptyContext
 
 runApp :: IO ()
 runApp = runResourceT $ do
   pool <- dbResource
+  (logEnv, logContext, logNamespace) <- logResource "ChoreWheel" "production"
+  let env = AppEnv pool logEnv logContext logNamespace
   --createTestUser pool
-  jwtCfg <- defaultJWTSettings <$> liftIO generateKey
-  let env = AppEnv pool jwtCfg
-  liftIO $ run 8080 $ choreWheelApp $ appToHandler env
+  liftIO
+    $ run 8080
+    $ logRequests logEnv logNamespace
+    $ choreWheelApp
+    $ appToHandler env
