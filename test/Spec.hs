@@ -188,6 +188,24 @@ unitTests runS pool = testGroup "Query Tests"
 
       Session.statement householdId deleteEmptyHousehold
       liftIO assertCompletes
+  , testCase "Household members round trip" $ runS $ do
+      userId1 <- UserId <$> liftIO nextRandom
+      userId2 <- UserId <$> liftIO nextRandom
+      let user1 = User userId1 "test1" "test1"
+      let user2 = User userId2 "test2" "test2"
+      Session.statement (User userId1 "test1" "test1") insertUser
+      Session.statement (User userId2 "test2" "test2") insertUser
+
+      householdId <- HouseholdId <$> liftIO nextRandom
+      Session.statement (Household householdId "home") insertHousehold
+
+      Session.statement (householdId, userId1) insertHouseholdMember
+      Session.statement (householdId, userId2) insertHouseholdMember
+
+      result <- Session.statement householdId getHouseholdMembers
+      liftIO $ result @?= (HouseholdMembers $ NESet.fromList $ fromList [user1, user2])
+
+      liftIO assertCompletes
   -- Chore
   , testCase "Chore round trip" $ runS $ do
       userId <- UserId <$> liftIO nextRandom
@@ -339,6 +357,35 @@ unitTests runS pool = testGroup "Query Tests"
       insertParticipants (choreId, participants)
       output <- Session.statement choreId getChoreParticipants
       liftIO $ output @?= participants
+  , testCase "calculate participant rotation" $ do
+      today <- utctDay <$> liftIO getCurrentTime
+      userId1 <- UserId <$> liftIO nextRandom
+      userId2 <- UserId <$> liftIO nextRandom
+      userId3 <- UserId <$> liftIO nextRandom
+      userId4 <- UserId <$> liftIO nextRandom
+      userId5 <- UserId <$> liftIO nextRandom
+      let user2 = User userId2 "name2" "email2"
+      let user3 = User userId3 "name3" "email3"
+      let user4 = User userId4 "name4" "email4"
+      let user5 = User userId5 "name5" "email5"
+      let resolutions =
+            [ Resolution today Lapsed
+            , Resolution today $ Completed userId3
+            , Resolution today Skipped
+            , Resolution today Skipped
+            , Resolution today $ Completed userId1
+            , Resolution today $ Completed userId2
+            ]
+      let householdMembers = HouseholdMembers $ NESet.fromList $ fromList [user2, user3, user4, user5]
+      let someParticipants = Some $ NESet.fromList $ fromList [userId2, userId3, userId4]
+
+      let resultSome = rotation resolutions householdMembers someParticipants
+      let resultEveryone = rotation resolutions householdMembers Everyone
+      let resultNone = rotation resolutions householdMembers None
+
+      resultSome @?= [user4, user3, user2]
+      resultEveryone @?= [user4, user5, user3, user2]
+      resultNone @?= []
   ]
 
 -- patternTests :: TestTree

@@ -10,6 +10,8 @@ module Schedule.Pattern
   , resolvePatternMonthly
   , nextEligibleDayWeekly
   , nextEligibleDayMonthly
+  , futureStatesWeekly
+  , futureStatesMonthly
   , PatternStateError (..)
   ) where
 
@@ -120,11 +122,11 @@ nextPositionMonthly = nextPosition nextMonthDay
 nextDays :: (PatternState a -> PatternState a) -> PatternState a -> [PatternState a]
 nextDays f = unfoldr (Just . dupe . f)
 
-nextDaysWeekly :: WeeklyPatternState -> [WeeklyPatternState]
-nextDaysWeekly = nextDays nextPositionWeekly
+futureStatesWeekly :: WeeklyPatternState -> [WeeklyPatternState]
+futureStatesWeekly = nextDays nextPositionWeekly
 
-nextDaysMonthly :: MonthlyPatternState -> [MonthlyPatternState]
-nextDaysMonthly = nextDays nextPositionMonthly
+futureStatesMonthly :: MonthlyPatternState -> [MonthlyPatternState]
+futureStatesMonthly = nextDays nextPositionMonthly
 
 nextEligibleDay
   :: Eq a
@@ -162,7 +164,7 @@ resolvePatternWeekly
 resolvePatternWeekly p@(PatternState _ pos) day
   | pos.day > day = ([], Nothing)
   | otherwise = bimap (map getDay) (viaNonEmpty head)
-                $ span ((day>) . getDay) $ p : nextDaysWeekly p
+                $ span ((day>) . getDay) $ p : futureStatesWeekly p
 
 resolvePatternMonthly
   :: MonthlyPatternState
@@ -171,4 +173,4 @@ resolvePatternMonthly
 resolvePatternMonthly p@(PatternState _ pos) day
   | pos.day > day = ([], Nothing)
   | otherwise = bimap (map getDay) (viaNonEmpty head)
-                $ span ((day>) . getDay) $ p : nextDaysMonthly p
+                $ span ((day>) . getDay) $ p : futureStatesMonthly p

@@ -151,7 +151,7 @@ getChoreEvents =
   select day :: date, type :: text, user_id :: uuid?
   from chore_event
   where chore_id = $1 :: uuid
-  order by day desc|]
+  order by day asc|]
 
 -- Includes the last resolution before the range to be able to generate a
 -- complete history for the range (i.e. to be able to show if the first

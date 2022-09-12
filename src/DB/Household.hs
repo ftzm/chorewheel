@@ -5,8 +5,9 @@ module DB.Household where
 import Data.Profunctor (dimap, lmap)
 import Hasql.Statement (Statement(..))
 import Hasql.TH
-import Models (Household(..), HouseholdId(..), UserId(..))
-import Data.Vector
+import Models (Household(..), HouseholdId(..), HouseholdMembers(..), User(..), UserId(..))
+import qualified Data.Vector as V
+import DB.Util
 
 insertHousehold :: Statement Household ()
 insertHousehold =
@@ -22,7 +23,7 @@ insertHouseholdMember =
     insert into household_member (household_id, user_id)
     values ($1 :: uuid, $2 :: uuid)|]
 
-getUserHouseholds :: Statement UserId (Vector Household)
+getUserHouseholds :: Statement UserId (V.Vector Household)
 getUserHouseholds =
   dimap unUserId (fmap (\(i, n) -> Household (HouseholdId i) n))
   [vectorStatement|
@@ -58,3 +59,17 @@ getHouseholdIdFromName =
     join household_member hm on hm.household_id = h.id
     where hm.user_id = $1 :: uuid
     and h.name = $2 :: text|]
+
+getHouseholdMembers :: Statement HouseholdId HouseholdMembers
+getHouseholdMembers =
+  dimap unHouseholdId loadMembers
+  [vectorStatement|
+  select u.id :: uuid, u.name :: text, u.email :: text
+  from household_member hm
+  join "user" u on hm.user_id = u.id
+  where hm.household_id = $1 :: uuid|]
+  where
+    loadMembers =
+      HouseholdMembers
+      . loadNESetUnsafeV
+      . V.map (\(i, n, e) -> User (UserId i) n e)

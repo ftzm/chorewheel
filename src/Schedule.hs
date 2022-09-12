@@ -11,6 +11,7 @@ module Schedule
   , StrictDaysState (..)
   , StrictDays (..)
   , resolveSchedule
+  , futureStates
   , PosNeg (..)
   , pattern Smarter
   , nonneg
@@ -95,13 +96,13 @@ data ScheduleState
 -- updating. It may make sense to only have a scheduleState-like type where the
 -- state is optional
 
-nextDaysFlex :: FlexDaysState -> [FlexDaysState]
-nextDaysFlex =
+futureStatesFlex :: FlexDaysState -> [FlexDaysState]
+futureStatesFlex =
   unfoldr (\(FlexDaysState s@(FlexDays i) day) ->
              Just $ dupe $ FlexDaysState s $ addDays (fromIntegral i) day)
 
-nextDaysStrict :: StrictDaysState -> [StrictDaysState]
-nextDaysStrict =
+futureStatesStrict :: StrictDaysState -> [StrictDaysState]
+futureStatesStrict =
   unfoldr (\(StrictDaysState s@(StrictDays i) day) ->
              Just $ dupe $ StrictDaysState s $ addDays (fromIntegral i) day)
 
@@ -110,7 +111,7 @@ resolveFlexDays f@(FlexDaysState s@(FlexDays days) dayScheduled) dayResolved
   | dayScheduled > dayResolved =
     ([], Just $ FlexDaysState s $ addDays (fromIntegral days) dayResolved)
   | otherwise =
-    ( takeWhile (dayResolved>) $ map getDayFlex $ f : nextDaysFlex f
+    ( takeWhile (dayResolved>) $ map getDayFlex $ f : futureStatesFlex f
     , Just $ FlexDaysState s $ addDays (fromIntegral days) dayResolved
     )
   where
@@ -120,7 +121,7 @@ resolveStrictDays :: StrictDaysState -> Day -> ([Day], Maybe StrictDaysState)
 resolveStrictDays s'@(StrictDaysState _ dayScheduled) dayResolved
   | dayScheduled > dayResolved = ([], Nothing)
   | otherwise = bimap (map getDayStrict) (viaNonEmpty head)
-                $ span ((dayResolved>) . getDayStrict) $ s' : nextDaysStrict s'
+                $ span ((dayResolved>) . getDayStrict) $ s' : futureStatesStrict s'
   where
     getDayStrict (StrictDaysState _ d) = d
 
@@ -146,6 +147,12 @@ resolveSchedule scheduleState lastResolved resolution
       lapses = map (flip Resolution Lapsed) lapsedDays
       updatedScheduleState = fromMaybe scheduleState nextScheduleState
     in Right (lapses ++ [resolution], updatedScheduleState)
+
+futureStates :: ScheduleState -> [ScheduleState]
+futureStates (FlexDaysSS s) = map FlexDaysSS $ futureStatesFlex s
+futureStates (StrictDaysSS s) = map StrictDaysSS $ futureStatesStrict s
+futureStates (WeeklyPatternSS s) = map WeeklyPatternSS $ futureStatesWeekly s
+futureStates (MonthlyPatternSS s) = map MonthlyPatternSS $ futureStatesMonthly s
 
 ---
 -- I could use pattern synonyms to hide the constructors

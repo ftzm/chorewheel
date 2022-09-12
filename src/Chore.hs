@@ -1,16 +1,20 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedLabels #-}
-
 module Chore where
 
+import GHC.Records (HasField)
 import Data.Time.Clock
 import Data.Time.Calendar
 import Data.UUID
 import Data.Generics.Internal.VL.Lens
 import Data.Generics.Labels() --instance declarations
+import qualified Data.Set.NonEmpty as NESet
+import qualified Data.Set as Set
+import Data.List ((\\))
 
 import Schedule
 import Participants
+import Models
 
 -------------------------------------------------------------------------------
 -- | Represents a period of time. The first date is guaranteed to be before the
@@ -60,3 +64,18 @@ doChore c@Chore {..} resolution =
       , c & #schedule .~ nextScheduleState
           & #lastResolution .~ (Just resolution)
       )
+
+enrichById :: (Foldable t, Eq b, HasField "id'" a b) => t a -> [b] -> [a]
+enrichById s = catMaybes . map (\i -> find ((i==) . (.id')) s)
+
+rotation :: [Resolution] -> HouseholdMembers -> Participants -> [User]
+rotation resolutions (HouseholdMembers hm) participants =
+  enrichById hm order
+  where
+    participantSet = case participants of
+      Some ps -> NESet.toSet ps
+      Everyone -> Set.map (.id') $ NESet.toSet hm
+      None -> mempty
+    completions = ordNub [ u | Completed u <- map resolutionType resolutions
+                             , Set.member u participantSet]
+    order = (toList participantSet \\ completions) ++ completions

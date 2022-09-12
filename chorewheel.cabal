@@ -274,6 +274,7 @@ test-suite spec
     , hasql-transaction
     , http-api-data
     , http-media
+    , katip
     , lucid2
     , memory
     , monad-control
@@ -284,6 +285,7 @@ test-suite spec
     , profunctors
     , raw-strings-qq
     , relude >=1.1.0.0
+    , resourcet
     , resource-pool
     , servant >=0.19
     , servant-auth-server

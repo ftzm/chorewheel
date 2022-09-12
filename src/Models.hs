@@ -5,6 +5,7 @@
 module Models where
 
 import Servant.Auth.Server
+import qualified Data.Set.NonEmpty as NESet
 
 --import Data.Generics.Internal.VL.Lens
 import Data.Generics.Labels()
@@ -16,7 +17,7 @@ data User = User
   { id' :: UserId
   , name :: Text
   , email :: Text
-  } deriving (Show, Eq, Generic)
+  } deriving (Show, Eq, Generic, Ord)
 
 instance ToJSON User -- generated via Generic
 instance FromJSON User -- generated via Generic
@@ -84,9 +85,11 @@ data Household  = Household
   , name :: Text
   } deriving (Show, Eq, Generic)
 
-data Clash = Clash {
-  name :: Text
-                   }
+newtype HouseholdMembers =
+  HouseholdMembers { unHouseholdMembers :: NESet.NESet User }
+  deriving (Show, Eq)
+
+data Clash = Clash { name :: Text }
 
 -- h :: Household
 -- h = Household (HouseholdId nil) "house"
