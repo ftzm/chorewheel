@@ -35,6 +35,7 @@ insertConstructor =
       StrictDaysSS _ -> "strict_days"
       WeeklyPatternSS _ -> "weekly_pattern"
       MonthlyPatternSS _ -> "monthly_pattern"
+      UnscheduledSS -> "unscheduled"
 
 insertFlexDays :: Statement (ChoreId, FlexDaysState) ()
 insertFlexDays =
@@ -133,6 +134,7 @@ insertSchedule args@(choreId, s) = do
     StrictDaysSS x -> Session.statement (choreId, x) insertStrictDays
     WeeklyPatternSS x -> insertWeeklyPattern (choreId, x)
     MonthlyPatternSS x -> insertMonthlyPattern (choreId, x)
+    UnscheduledSS -> return ()
 
 getSchedule :: Statement ChoreId Schedule
 getSchedule =
@@ -199,6 +201,7 @@ getSchedule =
         elemDays = map (DayOfMonth . fromIntegral) $ V.toList ep
         elems = loadNESetUnsafe $ zip elemIterations elemDays
       in MonthlyPatternS $ Pattern elems $ fromIntegral i
+    decoder ("unscheduled", _, _, _, _, _, _, _, _) = UnscheduledS
     decoder _ = error "impossible due to DB constraints"
 
 deleteSchedule :: Statement ChoreId ()

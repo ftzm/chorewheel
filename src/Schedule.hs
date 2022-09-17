@@ -12,6 +12,9 @@ module Schedule
   , StrictDays (..)
   , resolveSchedule
   , futureStates
+  , nextEligibleDay
+
+
   , PosNeg (..)
   , pattern Smarter
   , nonneg
@@ -39,6 +42,7 @@ data Schedule
    -- ^ Schedule tasks by a repeating pattern of weeks/months.
    | WeeklyPatternS WeeklyPattern
    | MonthlyPatternS MonthlyPattern
+   | UnscheduledS
    deriving (Eq, Show)
 
 data FlexDaysState = FlexDaysState FlexDays Day
@@ -78,6 +82,7 @@ data ScheduleState
   -- the included pattern state is the last scheduled day.
   | WeeklyPatternSS WeeklyPatternState
   | MonthlyPatternSS MonthlyPatternState
+  | UnscheduledSS
    deriving (Eq, Show)
 
 -- scheduleStateDay :: ScheduleState -> Day
@@ -144,6 +149,7 @@ resolveSchedule scheduleState lastResolved resolution
             fmap WeeklyPatternSS <$> resolvePatternWeekly s resolution.day
           MonthlyPatternSS s ->
             fmap MonthlyPatternSS <$> resolvePatternMonthly s resolution.day
+          UnscheduledSS -> ([], Nothing)
       lapses = map (flip Resolution Lapsed) lapsedDays
       updatedScheduleState = fromMaybe scheduleState nextScheduleState
     in Right (lapses ++ [resolution], updatedScheduleState)
@@ -153,6 +159,14 @@ futureStates (FlexDaysSS s) = map FlexDaysSS $ futureStatesFlex s
 futureStates (StrictDaysSS s) = map StrictDaysSS $ futureStatesStrict s
 futureStates (WeeklyPatternSS s) = map WeeklyPatternSS $ futureStatesWeekly s
 futureStates (MonthlyPatternSS s) = map MonthlyPatternSS $ futureStatesMonthly s
+futureStates UnscheduledSS = []
+
+nextEligibleDay :: Day -> Schedule -> Either PatternStateError ScheduleState
+nextEligibleDay day (FlexDaysS s) = return $ FlexDaysSS $ FlexDaysState s day
+nextEligibleDay day (StrictDaysS s) = return $ StrictDaysSS $ StrictDaysState s day
+nextEligibleDay day (WeeklyPatternS s) = WeeklyPatternSS <$> nextEligibleDayWeekly s 0 day
+nextEligibleDay day (MonthlyPatternS s) = MonthlyPatternSS <$> nextEligibleDayMonthly s 0 day
+nextEligibleDay _ _ = return UnscheduledSS
 
 ---
 -- I could use pattern synonyms to hide the constructors

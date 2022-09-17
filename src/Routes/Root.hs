@@ -28,13 +28,6 @@ data CreateChorePayload = CreateChorePayload
 
 instance FromForm CreateChorePayload
 
-
--- newtype ScheduleFormPayload =
---   ScheduleFormPayload {formType :: Text }
---   deriving Generic
---
--- instance FromForm ScheduleFormPayload
-
 data ChoreWheelApi mode = ChoreWheelApi
   { _ping :: mode
       :- "ping"

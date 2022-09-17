@@ -13,11 +13,16 @@ module Schedule.Pattern
   , futureStatesWeekly
   , futureStatesMonthly
   , PatternStateError (..)
+  , createPattern
+  , createWeeklyState
+  , createMonthlyState
   ) where
 
 import Data.Set.NonEmpty (NESet, size, elemAt)
 import Data.Time.Calendar hiding (DayOfMonth)
 import Schedule.Primitives
+import qualified Data.Set.NonEmpty as NESet
+import Control.Monad.Except
 
 data Pattern a = Pattern
   -- ^ set of (iteration index, position in iteration)
@@ -37,8 +42,14 @@ data PatternPosition = PatternPosition
   , index :: Int
   } deriving (Eq, Show)
 
+data PatternError
+  = IterationsNonPositive
+  | InvalidElemDay
+  | DaysEmpty
+  | ElemOutOfBounds
+
 data PatternStateError
-  = IndexOutOfRange
+  = IndexOutOfBounds
   | DayInvalid
 
 -- mkWeeklyPatternState
@@ -79,29 +90,45 @@ elemAtEither :: Int -> NESet a -> Either PatternStateError a
 elemAtEither index set =
   if index < size set
   then Right $ elemAt index set
-  else Left IndexOutOfRange
+  else Left IndexOutOfBounds
 
--- validatePatternState
---   :: Eq a
---   => (Day -> a)
---   -> Pattern a
---   -> PatternPosition
---   -> Either PatternStateError (PatternState a)
--- validatePatternState f pat@Pattern{..} pos@PatternPosition {..} =
---   bool (Left DayInvalid) (Right $ PatternState pat pos) .
---   (f day ==) . snd =<< elemAtEither index elems
---
--- validateWeeklyState
---   :: WeeklyPattern
---   -> PatternPosition
---   -> Either PatternStateError WeeklyPatternState
--- validateWeeklyState = validatePatternState getWeekday
---
--- validateMonthlyState
---   :: MonthlyPattern
---   -> PatternPosition
---   -> Either PatternStateError MonthlyPatternState
--- validateMonthlyState = validatePatternState getDayOfMonth
+createPattern
+  :: Ord a
+  => (Int -> Maybe a)
+  -> [(Int, Int)]
+  -> Int
+  -> Either PatternError (Pattern a)
+createPattern f elems iterations = do
+  when (iterations < 1) $ throwError IterationsNonPositive
+  when ((any ((>= iterations) . fst)) elems) $ throwError ElemOutOfBounds
+  when ((any ((< 0) . fst)) elems) $ throwError ElemOutOfBounds
+  enumElems <- maybeToEither InvalidElemDay $ traverse (traverse f) elems
+  elemSet <- maybeToEither DaysEmpty $ (NESet.fromList <$> nonEmpty enumElems)
+  return $ Pattern elemSet iterations
+  where
+    maybeToEither e = maybe (Left e) Right
+
+validatePatternState
+  :: Eq a
+  => (Day -> a)
+  -> Pattern a
+  -> PatternPosition
+  -> Either PatternStateError (PatternState a)
+validatePatternState f pat@Pattern{..} pos@PatternPosition {..} =
+  bool (Left DayInvalid) (Right $ PatternState pat pos) .
+  (f day ==) . snd =<< elemAtEither index elems
+
+createWeeklyState
+  :: WeeklyPattern
+  -> PatternPosition
+  -> Either PatternStateError WeeklyPatternState
+createWeeklyState = validatePatternState getWeekday
+
+createMonthlyState
+  :: MonthlyPattern
+  -> PatternPosition
+  -> Either PatternStateError MonthlyPatternState
+createMonthlyState = validatePatternState getDayOfMonth
 
 nextPosition
   :: (Day -> Int -> (Int, a) -> (Int, a) -> Day)

@@ -5,8 +5,9 @@ import Servant.Server.Generic
 import Servant.Server.StaticFiles
 import Lucid
 import Control.Monad.Error.Class
-import qualified Data.Set as S
 import Data.UUID
+import qualified Data.Text as T
+import Data.Time.Calendar (Day)
 
 import Models
 --import App
@@ -23,6 +24,11 @@ import Page.Landing
 import Page.Households
 import Page.Chore
 import Log
+import Chore
+import Schedule
+import Schedule.Primitives
+import Schedule.Pattern
+import Participants
 
 choreWheelApi
   :: MonadError ServerError m
@@ -138,14 +144,26 @@ addMonthRowHandler i = pure $ addMonthRow i
 removeMonthRowHandler :: Monad m => Int -> m (Html ())
 removeMonthRowHandler i = pure $ removeMonthRow i
 
-----
-
-data CreateChoreScheduleInput
-  = UnscheduledInput
-  | StrictInput Int
-  | FlexInput Int
-  | WeeklyInput (S.Set (Int, Int))
-  | MonthlyInput (S.Set (Int, Int))
+toChore :: CreateChorePayload -> UUID -> Day -> Chore
+toChore payload id' day = Chore (ChoreId id') payload.choreName scheduleState Nothing Everyone
+  where
+    read :: Text -> Int
+    read = either error id . readEither . T.unpack
+    days :: [(Int, Int)]
+    days = map (bimap read read . fmap (T.drop 1) . T.breakOn "-") payload.days
+    schedule =
+      case (payload.scheduleType, payload.interval) of
+        ("unscheduled", _) -> UnscheduledS
+        ("strict", Just interval) -> StrictDaysS $ StrictDays interval
+        ("flex", Just interval) -> FlexDaysS $ FlexDays interval
+        ("weekly",Just interval) ->
+          either (const $ error "invalid schedule") id
+           $ WeeklyPatternS <$> createPattern safeToEnum days interval
+        ("monthly", Just interval) ->
+          either (const $ error "invalid schedule") id
+           $ MonthlyPatternS <$> createPattern mkDayOfMonth days interval
+        _ -> error "invalid schedule"
+    scheduleState = either (const $ error "Invalid pattern state") id $ nextEligibleDay day schedule
 
 -- createChoreHandler :: Monad m => UserId -> CreateChorePayload -> m (Html ())
--- createChoreHandler _ _ = undefined
+-- createChoreHandler userId payload = undefined
