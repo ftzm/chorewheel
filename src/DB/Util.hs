@@ -4,6 +4,10 @@ import qualified Data.Set.NonEmpty as NESet
 import qualified Data.Vector as V
 import qualified Hasql.Encoders as E
 import Contravariant.Extras.Contrazip
+import Control.Monad.Catch
+import Hasql.Pool
+import Hasql.Session
+import Data.Text (isInfixOf)
 
 loadNESetUnsafe :: Ord a => [a] -> NESet.NESet a
 loadNESetUnsafe = NESet.fromList . fromList
@@ -63,3 +67,22 @@ vectorEncoder4N
 vectorEncoder4N v1 v2 v3 v4 =
   contramap V.unzip4
   $ contrazip4 (vectorParamN v1) (vectorParamN v2) (vectorParamN v3) (vectorParamN v4)
+
+mapSqlError :: (Exception e, MonadCatch m) => [(Text, e)] -> m a -> m a
+mapSqlError pairs act = catches act
+  [ Handler $ \e -> case e of
+    SessionUsageError (
+      QueryError _ _ (ResultError (ServerError _ errStr _ _ _))
+      ) ->
+      throwIfSubstr e errStr
+    otherError -> throwM otherError
+  , Handler $ \e -> case e of
+    QueryError _ _ (ResultError (ServerError _ errStr _ _ _)) ->
+      throwIfSubstr e errStr
+    otherError -> throwM otherError
+  ]
+  where
+    throwIfSubstr e errStr =
+      case [e' | (s,e') <- pairs, s `isInfixOf` decodeUtf8 errStr ] of
+        match:_ -> throwM match
+        [] -> throwM e

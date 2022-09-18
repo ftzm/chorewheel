@@ -9,6 +9,7 @@ module Log
   , logInfo
   , logResource
   , logRequests
+  , logIO
   ) where
 
 import Data.Generics.Product.Typed
@@ -95,6 +96,10 @@ toRequestLog = RequestLog
   <$> decodeUtf8 . requestMethod
   <*> decodeUtf8 . rawPathInfo
   <*> decodeUtf8 . rawQueryString
+
+logIO :: LogEnv -> Namespace -> Text -> IO ()
+logIO logEnv namespace msg =
+  runKatipContextT logEnv () namespace $ logFM ErrorS $ logStr msg
 
 logRequests :: LogEnv -> Namespace -> (Application -> Application)
 logRequests logEnv namespace baseApp =

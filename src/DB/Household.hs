@@ -32,6 +32,16 @@ getUserHouseholds =
     join household_member hm on hm.household_id = h.id
     where hm.user_id = $1 :: uuid |]
 
+isHouseholdMember :: Statement (UserId, HouseholdId) Bool
+isHouseholdMember =
+  lmap (bimap unUserId unHouseholdId)
+  [singletonStatement|
+  select exists (
+    select * from household_member
+    where user_id = $1 :: uuid
+    and household_id = $2 :: uuid
+  ) :: bool|]
+
 removeHouseholdMember :: Statement (HouseholdId, UserId) ()
 removeHouseholdMember =
   lmap (bimap unHouseholdId unUserId)

@@ -5,6 +5,7 @@
 module Models where
 
 import Servant.Auth.Server
+import Servant.API
 import qualified Data.Set.NonEmpty as NESet
 
 --import Data.Generics.Internal.VL.Lens
@@ -79,6 +80,7 @@ newtype SessionToken = SessionToken { unSessionToken :: Text }
 
 newtype HouseholdId  = HouseholdId { unHouseholdId :: UUID }
   deriving (Show, Eq)
+  deriving newtype (ToHttpApiData, FromHttpApiData)
 
 data Household  = Household
   { id' :: HouseholdId

@@ -17,6 +17,8 @@ import Effect.User
 import Effect.Auth.Session
 import Effect.Household
 import Effect.Chore
+import Effect.Identifier
+import Effect.Time
 import ApiUtil
 import Page.Home
 import Page.Login
@@ -29,6 +31,7 @@ import Schedule
 import Schedule.Primitives
 import Schedule.Pattern
 import Participants
+import Data.Time.Clock
 
 choreWheelApi
   :: MonadError ServerError m
@@ -37,6 +40,8 @@ choreWheelApi
   => HouseholdM m
   => ChoreM m
   => LogM m
+  => IdentifierM m
+  => TimeM m
   => ChoreWheelApi (AsServerT m)
 choreWheelApi = ChoreWheelApi
   { _ping = return "pong"
@@ -52,7 +57,7 @@ choreWheelApi = ChoreWheelApi
   , _removeWeekRow = removeWeekRowHandler
   , _addMonthRow = addMonthRowHandler
   , _removeMonthRow = removeMonthRowHandler
-  , _createChore = \_ input -> return $ toHtml @Text $ show input
+  , _createChore = createChoreHandler
   , _landing = landingHandler
   , _static = serveDirectoryWebApp "static"
   }
@@ -121,7 +126,7 @@ householdChoresHandler u n = do
     Nothing -> throwError err401
     Just householdId -> do
       allChores <- getFullChores householdId
-      return $ choresPage allChores
+      return $ choresPage householdId allChores
 
 scheduleFormHandler :: Monad m => Text -> m (Html ())
 scheduleFormHandler p = return $ case p of
@@ -144,8 +149,11 @@ addMonthRowHandler i = pure $ addMonthRow i
 removeMonthRowHandler :: Monad m => Int -> m (Html ())
 removeMonthRowHandler i = pure $ removeMonthRow i
 
-toChore :: CreateChorePayload -> UUID -> Day -> Chore
-toChore payload id' day = Chore (ChoreId id') payload.choreName scheduleState Nothing Everyone
+toChore :: CreateChorePayload -> UUID -> Day -> Either Text Chore
+toChore payload id' day =
+  case payload.choreName of
+    "" -> Left "empty chore name"
+    _ -> Right $ Chore (ChoreId id') payload.choreName scheduleState Nothing Everyone
   where
     read :: Text -> Int
     read = either error id . readEither . T.unpack
@@ -157,13 +165,18 @@ toChore payload id' day = Chore (ChoreId id') payload.choreName scheduleState No
         ("strict", Just interval) -> StrictDaysS $ StrictDays interval
         ("flex", Just interval) -> FlexDaysS $ FlexDays interval
         ("weekly",Just interval) ->
-          either (const $ error "invalid schedule") id
+          either (const $ (error $ "invalid schedule: " <> (show payload))) id
            $ WeeklyPatternS <$> createPattern safeToEnum days interval
         ("monthly", Just interval) ->
-          either (const $ error "invalid schedule") id
+          either (const $ (error $ "invalid schedule: " <> (show payload))) id
            $ MonthlyPatternS <$> createPattern mkDayOfMonth days interval
-        _ -> error "invalid schedule"
-    scheduleState = either (const $ error "Invalid pattern state") id $ nextEligibleDay day schedule
+        _ -> error $ "invalid schedule: " <> show payload
+    scheduleState = either (const $ error $ "Invalid pattern state") id $ nextEligibleDay day schedule
 
--- createChoreHandler :: Monad m => UserId -> CreateChorePayload -> m (Html ())
--- createChoreHandler userId payload = undefined
+createChoreHandler :: (Monad m, TimeM m, IdentifierM m, ChoreM m) => UserId -> HouseholdId -> CreateChorePayload -> m (Html ())
+createChoreHandler userId householdId payload = do
+  today <- utctDay <$> now
+  newUUID <- genId
+  chore <- either (const $ error "Invalid chore") return $ toChore payload newUUID today
+  _ <- saveChore userId householdId chore
+  return $ toHtml @Text $ show chore

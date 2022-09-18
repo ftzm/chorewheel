@@ -11,15 +11,11 @@ import qualified Hasql.Pool as Pool
 import qualified Hasql.Session as Session
 import qualified Hasql.Transaction as T
 import qualified Hasql.Transaction.Sessions as TS
---import Data.Either
---import Data.Functor
 import Data.Maybe
 import Database.Postgres.Temp
 import Data.ByteString(readFile)
 import Control.Monad.Error.Class
 import Data.Time.Clock
---import Control.Monad.IO.Class
---import Control.Monad.Reader
 import qualified Data.Vector as V
 import Data.UUID.V4
 import Data.Time.Calendar (addDays)
@@ -45,22 +41,27 @@ import Control.Monad.Catch
 -------------------------------------------------------------------------------
 -- Test utils
 
--- session c s =
-  -- Session.run s c >>=
-  -- either (fail . show) return
+-- Stolen from HUnit-Plus, which would not compile.
+-- | Assert that the given computation throws an exception that
+-- matches a predicate.
+assertThrows :: (Exception e, Show e)
+             => (e -> Assertion)
+             -> IO a
+             -> Assertion
+assertThrows check comp =
+  let runComp = comp >> assertFailure
+       "expected exception but computation finished normally"
+  in handle check runComp
 
 fromRight :: Either a b -> b
 fromRight (Right a) = a
 fromRight (Left _)  = error "unexpected Left"
 
 withPool' :: Pool.Pool -> Session.Session a -> IO a
-withPool' p s = Pool.use p s >>= either (fail . show) return
+withPool' p s = Pool.use p s >>= either throwM return
 
 withPool :: Pool.Pool -> Session.Session a -> IO (Either Pool.UsageError a)
 withPool = Pool.use
-
--- transaction' connection transaction =
-  -- session connection (TS.transaction TS.RepeatableRead TS.Write transaction)
 
 poolTransS :: Pool.Pool -> a -> S.Statement a b -> IO (Either Pool.UsageError b)
 poolTransS pool input statement =
@@ -70,7 +71,7 @@ poolTransS pool input statement =
                     return output
 
 withRollback :: Pool.Pool -> Session.Session a -> IO a
-withRollback p s = Pool.use p protectedSession >>= either (fail . show) return
+withRollback p s = Pool.use p protectedSession >>= either throwM return
   where
     protectedSession =
       bracket_ (Session.sql "BEGIN") (Session.sql "ROLLBACK") s
@@ -219,6 +220,17 @@ unitTests runS pool = testGroup "Query Tests"
       Session.statement (householdId, choreId2, "vacuum") insertChore
       chores <- Session.statement householdId householdChores
       liftIO $ V.toList chores @?= [(choreId1, "sweep"), (choreId2, "vacuum")]
+  , testCase "No duplicate chore names" $ assertThrows (\ChoreNameExists -> assertCompletes) $ mapSqlError [("chore_name_unique", ChoreNameExists)] $ runS $ do
+      userId <- UserId <$> liftIO nextRandom
+      Session.statement (User userId "test" "test") insertUser
+      householdId <- HouseholdId <$> liftIO nextRandom
+      Session.statement (Household householdId "home") insertHousehold
+      --Session.statement (householdId, userId') insertHouseholdMember
+      choreId1 <- ChoreId <$> liftIO nextRandom
+      choreId2 <- ChoreId <$> liftIO nextRandom
+      Session.statement (householdId, choreId1, "sweep") insertChore
+      Session.statement (householdId, choreId2, "sweep") insertChore
+      liftIO assertCompletes
   -- Schedule
   , testCase "Chore+Schedule round trip" $ runS $ do
       userId <- UserId <$> liftIO nextRandom
@@ -333,7 +345,7 @@ unitTests runS pool = testGroup "Query Tests"
       let resolutions = V.fromList $ map ((choreId,) . flip Resolution (Completed userId) . flip addDays today) [0..5]
       Session.statement resolutions insertChoreEvents
       output <- Session.statement choreId getChoreEvents
-      liftIO $ output @?= (V.reverse $ V.map snd resolutions)
+      liftIO $ output @?= V.map snd resolutions
   , testCase "getChoreEventsFrom" $ runS $ do
       today <- utctDay <$> liftIO getCurrentTime
       choreId <- ChoreId <$> liftIO nextRandom
@@ -384,7 +396,7 @@ unitTests runS pool = testGroup "Query Tests"
       let resultNone = rotation resolutions householdMembers None
 
       resultSome @?= [user4, user3, user2]
-      resultEveryone @?= [user4, user5, user3, user2]
+      drop 2 resultEveryone @?= [user3, user2]
       resultNone @?= []
   ]
 

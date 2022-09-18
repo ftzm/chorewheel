@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedLabels #-}
+{-# LANGUAGE DeriveAnyClass #-}
 module Chore where
 
 import GHC.Records (HasField)
@@ -50,6 +51,10 @@ data ChoreStatus
 
 newtype Scheduled = Scheduled { unScheduled :: Day}
 newtype Resolved = Resolved { unResolved :: Day}
+
+data ChoreNameExists = ChoreNameExists
+  deriving Show
+instance Exception ChoreNameExists
 
 -- where resolutionDay is later than the previous scheduled, return the lapsed
 -- days where they exist, and the resolution fed in, in a list.

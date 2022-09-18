@@ -12,6 +12,7 @@ import Data.UUID
 import           Web.FormUrlEncoded          (FromForm)
 import ServantLucid
 import Routes.SessionAuth
+import Models
 
 newtype CreateHouseholdPayload = CreateHouseholdPayload
   { newHouseholdName :: Text
@@ -86,6 +87,7 @@ data ChoreWheelApi mode = ChoreWheelApi
   , _createChore :: mode
       :- AuthProtect "session-auth"
       :> "create_chore"
+      :> Capture "householdId" HouseholdId
       :> ReqBody '[FormUrlEncoded] CreateChorePayload
       :> Post '[HTML] (Html ())
   , _landing :: mode

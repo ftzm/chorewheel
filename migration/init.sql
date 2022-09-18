@@ -60,6 +60,9 @@ CREATE TABLE IF NOT EXISTS chore (
   name TEXT NOT NULL
 );
 
+CREATE UNIQUE INDEX chore_name_unique ON chore (name);
+
+
 -- CREATE TYPE chore_event_type AS ENUM (
 --   'complete',
 --   'skip'

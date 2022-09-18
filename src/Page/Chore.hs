@@ -6,18 +6,19 @@ import Lucid.Base
 import Page.Attribute
 import Page.Common
 import Chore
+import Models (HouseholdId(..))
 
-choresPage :: [Chore] -> Html ()
-choresPage chores = container "chores " $ do
+choresPage :: HouseholdId -> [Chore] -> Html ()
+choresPage householdId chores = container "chores " $ do
   case chores of
     [] -> span_ "This household has no chores :("
-    _ -> span_ "Damn son look at all those chores"
+    _ -> ul_ [] $ mconcat $ map (li_ . toHtml . (.name)) chores
   hr_ []
   br_ []
-  addChore
+  addChore householdId
 
-addChore :: Html ()
-addChore = form_ [hxPost_ "/create_chore"] $ do
+addChore :: HouseholdId -> Html ()
+addChore householdId = form_ [hxPost_ $ "/create_chore/" <> show (unHouseholdId householdId)] $ do
   p_ "Add a chore"
   br_ []
   myInput [placeholder_ "Chore Name", name_ "choreName", xData_ "{}"]
@@ -61,7 +62,7 @@ adjuster
   -> Html ()
 adjuster targetPrefix addUrlPrefix removeUrlPrefix count= do
   case count of
-    1 -> myButton [ type_ "submit"
+    0 -> myButton [ type_ "submit"
                   , class_ "opacity-50 cursor-not-allowed"
                   , disabled_ ""] "remove"
     _ -> myButton [ type_ "submit"
@@ -69,6 +70,11 @@ adjuster targetPrefix addUrlPrefix removeUrlPrefix count= do
                   , hxTarget_ $ targetPrefix <> "-" <> show count
                   , hxSwap_ "outerHTML"
                   ] "remove"
+  input_ [ name_ "interval"
+         , style_ "display: none;"
+         , value_ $ show $ count + 1
+         ]
+  <>
   myButton [ type_ "submit"
            , hxGet_ addUrl
            , hxTarget_ "#adjuster"
@@ -83,8 +89,8 @@ adjuster targetPrefix addUrlPrefix removeUrlPrefix count= do
 createWeeklyForm :: Int -> Html ()
 createWeeklyForm _ = do
   span_ [] "Create chore on a flexible repeating schedule."
-  weekRow 1
-  div_ [id_ "adjuster"] $ weekAdjuster 1
+  weekRow 0
+  div_ [id_ "adjuster"] $ weekAdjuster 0
 
 weekAdjuster :: Int -> Html ()
 weekAdjuster = adjuster "#week" "/add_week_row/" "/remove_week_row/"
@@ -167,5 +173,5 @@ removeMonthRow targetRow =
 createMonthlyForm :: Int -> Html ()
 createMonthlyForm _ = do
   p_ "Create chore on a monthly repeating schedule."
-  monthRow 1
-  div_ [id_ "adjuster"] $ monthAdjuster 1
+  monthRow 0
+  div_ [id_ "adjuster"] $ monthAdjuster 0

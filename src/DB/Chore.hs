@@ -59,6 +59,7 @@ getFullChoresByHousehold = Statement sql encoder (D.rowVector rowDecoder) True
             elems = loadNESetUnsafe $ zip (map fromIntegral ei) elemDays
         in MonthlyPatternSS $ PatternState (Pattern elems $ fromIntegral i)
            $ PatternPosition scheduled $ fromIntegral index
+      (_, "unscheduled", _, _, _, _) -> UnscheduledSS
       e -> error $ "impossible due to DB constraints: " <> show e
       where
         rawResult = (,,,,,)

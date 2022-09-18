@@ -5,6 +5,8 @@ import qualified Hasql.Pool as HP
 import Servant.Server (ServerError)
 import Katip (LogEnv, LogContexts, Namespace)
 
+import Effect.Time
+import Effect.Identifier
 import Effect.Auth.Session
 import Effect.User
 import Effect.Household
@@ -26,6 +28,8 @@ newtype App a = App (ReaderT AppEnv (ExceptT ServerError IO) a)
     , MonadReader AppEnv
     , MonadError ServerError
     )
+  deriving TimeM via (TimeT App)
+  deriving IdentifierM via (IdentifierT App)
   deriving SessionAuthM via (SessionAuthT App)
   deriving UserM via (UserT App)
   deriving HouseholdM via (HouseholdT App)

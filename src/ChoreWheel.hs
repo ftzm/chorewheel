@@ -1,6 +1,5 @@
 module ChoreWheel where
 
-import Network.Wai.Handler.Warp (run)
 import Servant.Server
 import Servant.Server.Generic
 import           Control.Monad.Error.Class
@@ -13,11 +12,13 @@ import DB.User
 import Models
 import Data.UUID.V4
 import Log
+import Network.Wai
 
 import App
 import Server.Root
 import DB
-import Control.Monad.Catch (catch)
+import qualified Control.Monad.Catch as C
+import Network.Wai.Handler.Warp
 
 import Control.Monad.Trans.Resource
 
@@ -32,10 +33,11 @@ createTestUser p = do
 -- TODO: Investigate how to use this to convert internal errors to servant errors
 appToHandler :: AppEnv -> App a -> Handler a
 appToHandler env (App m) = do
-  val <- catch (liftIO $ runExceptT $ runReaderT m env) $
+  val <- C.catch (liftIO $ runExceptT $ runReaderT m env)
     -- Exception that pass this point are handled by WAI's default exception
     -- handler configured in its settings.
-    (\(e :: SomeException) -> print "error" >> throwM e)
+    --(\(e :: SomeException) -> putStrLn $ show >> throwM e)
+    (\(e :: SomeException) ->  throwM e)
   case val of
     Left e -> throwError e
     Right s -> return s
@@ -48,11 +50,17 @@ choreWheelApp f = genericServeTWithContext f choreWheelApi ctx
 runApp :: IO ()
 runApp = runResourceT $ do
   pool <- dbResource
+  --_ <- liftIO $ createTestUser pool
   (logEnv, logContext, logNamespace) <- logResource "ChoreWheel" "production"
   let env = AppEnv pool logEnv logContext logNamespace
-  --createTestUser pool
+  let warpLog :: Maybe Request -> SomeException -> IO () =
+        \_ e -> when (defaultShouldDisplayException e)
+        $ logIO logEnv logNamespace $ show e
+  let warpSettings = defaultSettings
+        & setPort 8080
+        & setOnException warpLog
   liftIO
-    $ run 8080
+    $ runSettings warpSettings
     $ logRequests logEnv logNamespace
     $ choreWheelApp
     $ appToHandler env

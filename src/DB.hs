@@ -43,7 +43,7 @@ createPool = parsePostgresConfig >>= \case
 runPool :: WithDb r m => HS.Session a -> m a
 runPool s = do
   pool <- asks $ getTyped @HP.Pool
-  liftIO $ HP.use pool s >>= either (fail . show) return
+  liftIO $ HP.use pool s >>= either throwM return
 
 dbResource :: MonadResource m => m (HP.Pool)
 dbResource = snd <$> allocate createPool HP.release
