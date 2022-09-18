@@ -94,6 +94,7 @@ library
     , hasql-transaction
     , http-api-data
     , http-media
+    , http-types
     , katip
     , lucid2
     , memory
@@ -166,6 +167,7 @@ executable chorewheel-exe
     , hasql-transaction
     , http-api-data
     , http-media
+    , http-types
     , lucid2
     , memory
     , monad-control
@@ -276,6 +278,7 @@ test-suite spec
     , hasql-transaction
     , http-api-data
     , http-media
+    , http-types
     , katip
     , lucid2
     , memory

@@ -18,7 +18,9 @@ import Control.Monad.Trans.Resource
 import Katip
 
 import Network.Wai
+import Network.HTTP.Types.Status
 import Data.Aeson
+
 
 --------------------------------------------------------------------------------
 -- Generic Lens Katip Instances
@@ -87,15 +89,17 @@ data RequestLog = RequestLog
   { method :: Text
   , path :: Text
   , query :: Text
+  , responseCode :: Int
   } deriving (Show, Generic)
 
 instance ToJSON RequestLog
 
-toRequestLog :: Request -> RequestLog
-toRequestLog = RequestLog
-  <$> decodeUtf8 . requestMethod
-  <*> decodeUtf8 . rawPathInfo
-  <*> decodeUtf8 . rawQueryString
+toRequestLog :: Request -> Response -> RequestLog
+toRequestLog req res = RequestLog
+  (decodeUtf8 $ requestMethod req)
+  (decodeUtf8 $ rawPathInfo req)
+  (decodeUtf8 $ rawQueryString req)
+  (statusCode $ responseStatus res)
 
 logIO :: LogEnv -> Namespace -> Text -> IO ()
 logIO logEnv namespace msg =
@@ -104,8 +108,8 @@ logIO logEnv namespace msg =
 logRequests :: LogEnv -> Namespace -> (Application -> Application)
 logRequests logEnv namespace baseApp =
   \req responseFunc ->
-    baseApp req $ \res -> logReq req >> responseFunc res
+    baseApp req $ \res -> logReq req res >> responseFunc res
   where
-    logReq req =
-      runKatipContextT logEnv (sl "request" $ toRequestLog req) namespace
+    logReq req res =
+      runKatipContextT logEnv (sl "request" $ toRequestLog req res) namespace
       $ logFM InfoS "request"
