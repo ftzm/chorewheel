@@ -1,25 +1,85 @@
-cabal-version: 2.0
-
--- This file has been generated from package.yaml by hpack version 0.34.6.
---
--- see: https://github.com/sol/hpack
+cabal-version: 2.2
 
 name:           chorewheel
 version:        0.1.0.0
 description:    Please see the README on GitHub at <https://github.com/ftzm/readme.org#readme>
 homepage:       https://github.com/ftzm/chorewheel#readme
 bug-reports:    https://github.com/ftzm/chorewheel/issues
-author:         Author name here
-maintainer:     example@example.com
-copyright:      2018 Author name here
-license:        BSD3
+author:         Matthew Fitzsimmons
+maintainer:     m at ftzm.org
+copyright:      Matthew Fitzsimmons
+license:        BSD-3-Clause
 build-type:     Simple
 
 source-repository head
   type: git
   location: https://github.com/ftzm/chorewheel
 
+common common-options
+  default-extensions:
+      OverloadedStrings
+      RecordWildCards
+      LambdaCase
+      DerivingStrategies
+      DerivingVia
+      DuplicateRecordFields
+      OverloadedRecordDot
+      KindSignatures
+  build-depends:
+      aeson
+    , base >=4.7 && <5
+    , base64-bytestring
+    , bytestring
+    , containers
+    , contravariant-extras
+    , cookie
+    , cryptonite
+    , envparse
+    , exceptions
+    , generic-lens
+    , hasql
+    , hasql-pool
+    , hasql-th
+    , hasql-transaction
+    , http-api-data
+    , http-media
+    , http-types
+    , katip
+    , lucid2
+    , memory
+    , monad-control
+    , monad-logger
+    , mtl
+    , nonempty-containers
+    , process
+    , profunctors
+    , raw-strings-qq
+    , relude >=1.1.0.0
+    , resourcet
+    , resource-pool
+    , servant >=0.19
+    , servant-auth-server
+    , servant-lucid
+    , servant-server >=0.4.7.0
+    , text
+    , time
+    , tmp-postgres
+    , transformers
+    , tuple
+    , utf8-string
+    , uuid
+    , vector
+    , wai
+    , warp
+    , word8
+  mixins:
+      base hiding (Prelude)
+    , relude (Relude as Prelude)
+  default-language: GHC2021
+  ghc-options: -Wall -Werror -Wwarn=missing-home-modules -Wno-unused-do-bind -Wno-missing-home-modules -Wno-type-defaults -Wno-orphans
+
 library
+  import: common-options
   exposed-modules:
       ApiUtil
       App
@@ -66,71 +126,9 @@ library
       Paths_chorewheel
   hs-source-dirs:
       src
-  default-extensions:
-      OverloadedStrings
-      RecordWildCards
-      LambdaCase
-      DerivingStrategies
-      DerivingVia
-      DuplicateRecordFields
-      OverloadedRecordDot
-      KindSignatures
-  ghc-options: -Wall -Werror -Wwarn=missing-home-modules -Wno-unused-do-bind -Wno-missing-home-modules -Wno-type-defaults -Wno-orphans
-  build-depends:
-      aeson
-    , base >=4.7 && <5
-    , base64-bytestring
-    , bytestring
-    , containers
-    , contravariant-extras
-    , cookie
-    , cryptonite
-    , envparse
-    , exceptions
-    , generic-lens
-    , hasql
-    , hasql-pool
-    , hasql-th
-    , hasql-transaction
-    , http-api-data
-    , http-media
-    , http-types
-    , katip
-    , lucid2
-    , memory
-    , monad-control
-    , monad-logger
-    , mtl
-    , nonempty-containers
-    , process
-    , profunctors
-    , raw-strings-qq
-    , relude >=1.1.0.0
-    , resourcet
-    , resource-pool
-    , servant >=0.19
-    , servant-auth-server
-    , servant-lucid
-    , servant-server >=0.4.7.0
-    , tasty
-    , tasty-hunit
-    , text
-    , time
-    , tmp-postgres
-    , transformers
-    , tuple
-    , utf8-string
-    , uuid
-    , vector
-    , wai
-    , warp
-    , word8
-  mixins:
-      base hiding (Prelude)
-    , relude (Relude as Prelude)
-  default-language: GHC2021
 
 executable chorewheel-exe
+  import: common-options
   main-is: Main.hs
   other-modules:
       Paths_chorewheel
@@ -138,178 +136,14 @@ executable chorewheel-exe
       Paths_chorewheel
   hs-source-dirs:
       app
-  default-extensions:
-      OverloadedStrings
-      RecordWildCards
-      LambdaCase
-      DerivingStrategies
-      DerivingVia
-      DuplicateRecordFields
-      OverloadedRecordDot
-      KindSignatures
-  ghc-options: -Wall -Werror -Wwarn=missing-home-modules -Wno-unused-do-bind -Wno-missing-home-modules -Wno-type-defaults -Wno-orphans -threaded -rtsopts -with-rtsopts=-N
-  build-depends:
-      aeson
-    , base >=4.7 && <5
-    , base64-bytestring
-    , bytestring
-    , chorewheel
-    , containers
-    , contravariant-extras
-    , cookie
-    , cryptonite
-    , envparse
-    , exceptions
-    , generic-lens
-    , hasql
-    , hasql-pool
-    , hasql-th
-    , hasql-transaction
-    , http-api-data
-    , http-media
-    , http-types
-    , lucid2
-    , memory
-    , monad-control
-    , monad-logger
-    , mtl
-    , nonempty-containers
-    , process
-    , profunctors
-    , raw-strings-qq
-    , relude >=1.1.0.0
-    , resource-pool
-    , resourcet
-    , servant >=0.19
-    , servant-auth-server
-    , servant-lucid
-    , servant-server >=0.4.7.0
-    , tasty
-    , tasty-hunit
-    , text
-    , time
-    , tmp-postgres
-    , transformers
-    , tuple
-    , utf8-string
-    , uuid
-    , vector
-    , wai
-    , warp
-    , word8
-  mixins:
-      base hiding (Prelude)
-    , relude (Relude as Prelude)
-  default-language: GHC2021
 
 test-suite spec
+  import: common-options
   type: exitcode-stdio-1.0
   main-is: Spec.hs
-  other-modules:
-      ApiUtil
-      App
-      Chore
-      ChoreWheel
-      DB
-      DB.Chore
-      DB.Household
-      DB.Password
-      DB.RefreshToken
-      DB.Schedule
-      DB.Session
-      DB.User
-      DB.Util
-      DB.SessionException
-      Effect.Auth.Jwt
-      Effect.Auth.Password
-      Effect.Auth.Session
-      Effect.Chore
-      Effect.Household
-      Effect.User
-      Log
-      Models
-      Page.Attribute
-      Page.Chore
-      Page.Common
-      Page.Home
-      Page.Households
-      Page.Landing
-      Page.Login
-      Participants
-      Routes.Root
-      Routes.SessionAuth
-      Schedule
-      Schedule.Pattern
-      Schedule.Primitives
-      ServantLucid
-      Server.Root
-      Server.SessionAuth
-      Paths_chorewheel
-  autogen-modules:
-      Paths_chorewheel
   hs-source-dirs:
       test
       src
-  default-extensions:
-      OverloadedStrings
-      RecordWildCards
-      LambdaCase
-      DerivingStrategies
-      DerivingVia
-      DuplicateRecordFields
-      OverloadedRecordDot
-      KindSignatures
-  ghc-options: -Wall -Werror -Wwarn=missing-home-modules -Wno-unused-do-bind -Wno-missing-home-modules -Wno-type-defaults -Wno-orphans
   build-depends:
-      aeson
-    , base >=4.7 && <5
-    , base64-bytestring
-    , bytestring
-    , containers
-    , contravariant-extras
-    , cookie
-    , cryptonite
-    , envparse
-    , exceptions
-    , generic-lens
-    , hasql
-    , hasql-pool
-    , hasql-th
-    , hasql-transaction
-    , http-api-data
-    , http-media
-    , http-types
-    , katip
-    , lucid2
-    , memory
-    , monad-control
-    , monad-logger
-    , mtl
-    , nonempty-containers
-    , process
-    , profunctors
-    , raw-strings-qq
-    , relude >=1.1.0.0
-    , resourcet
-    , resource-pool
-    , servant >=0.19
-    , servant-auth-server
-    , servant-lucid
-    , servant-server >=0.4.7.0
     , tasty
     , tasty-hunit
-    , text
-    , time
-    , tmp-postgres
-    , transformers
-    , tuple
-    , utf8-string
-    , uuid
-    , vector
-    , wai
-    , warp
-    , word8
-  mixins:
-      base hiding (Prelude)
-    , relude (Relude as Prelude)
-  default-language: GHC2021
