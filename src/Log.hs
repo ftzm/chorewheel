@@ -21,7 +21,6 @@ import Network.Wai
 import Network.HTTP.Types.Status
 import Data.Aeson
 
-
 --------------------------------------------------------------------------------
 -- Generic Lens Katip Instances
 
@@ -96,10 +95,11 @@ instance ToJSON RequestLog
 
 toRequestLog :: Request -> Response -> RequestLog
 toRequestLog req res = RequestLog
-  (decodeUtf8 $ requestMethod req)
-  (decodeUtf8 $ rawPathInfo req)
-  (decodeUtf8 $ rawQueryString req)
-  (statusCode $ responseStatus res)
+  { method = decodeUtf8 $ requestMethod req
+  , path = decodeUtf8 $ rawPathInfo req
+  , query = decodeUtf8 $ rawQueryString req
+  , responseCode = statusCode $ responseStatus res
+  }
 
 logIO :: LogEnv -> Namespace -> Text -> IO ()
 logIO logEnv namespace msg =
