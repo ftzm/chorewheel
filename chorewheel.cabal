@@ -92,6 +92,7 @@ library
       DB.RefreshToken
       DB.Schedule
       DB.Session
+      DB.SessionException
       DB.User
       DB.Util
       Effect.Auth.Jwt

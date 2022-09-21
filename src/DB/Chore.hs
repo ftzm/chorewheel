@@ -43,49 +43,54 @@ getFullChoresByHousehold :: Statement HouseholdId (V.Vector Chore)
 getFullChoresByHousehold = Statement sql encoder (D.rowVector rowDecoder) True
   where
     encoder = unHouseholdId >$< E.param (E.nonNullable E.uuid)
-    rowDecoder = rawResult <&> \raw@((choreId, choreName), _, _, _, _, _) ->
-      (\s -> Chore (ChoreId choreId) choreName s Nothing Everyone) $ case raw of
-      (_, "flex_days", Just (days, scheduled), _, _, _) ->
-        FlexDaysSS $ FlexDaysState (FlexDays $ fromIntegral days) scheduled
-      (_, "strict_days", _, Just (days, scheduled), _, _) ->
-        StrictDaysSS $ StrictDaysState (StrictDays $ fromIntegral days) scheduled
-      (_, "weekly_pattern", _, _, Just (i, ei, ep, index, scheduled), _) ->
-        let elemDays = map (toEnum . fromIntegral) ep
-            elems = loadNESetUnsafe $ zip (map fromIntegral ei) elemDays
-        in WeeklyPatternSS $ PatternState (Pattern elems $ fromIntegral i)
-           $ PatternPosition scheduled $ fromIntegral index
-      (_, "monthly_pattern", _, _, _, Just (i, ei, ep, index, scheduled)) ->
-        let elemDays = map (DayOfMonth . fromIntegral)  ep
-            elems = loadNESetUnsafe $ zip (map fromIntegral ei) elemDays
-        in MonthlyPatternSS $ PatternState (Pattern elems $ fromIntegral i)
-           $ PatternPosition scheduled $ fromIntegral index
-      (_, "unscheduled", _, _, _, _) -> UnscheduledSS
-      e -> error $ "impossible due to DB constraints: " <> show e
-      where
-        rawResult = (,,,,,)
-          <$> colM chore
-          <*> colM D.text
-          <*> (sequenceT <$> colM simple)
-          <*> (sequenceT <$> colM simple)
-          <*> (sequenceT <$> colM pat)
-          <*> (sequenceT <$> colM pat)
-        colM = D.column . D.nonNullable
-        fieldM = D.field . D.nullable
-        arr = D.array . D.dimension replicateM . D.element . D.nonNullable
-        chore = D.composite $ (,)
-          <$> (D.field . D.nonNullable) D.uuid
-          <*> (D.field . D.nonNullable) D.text
-        simple = D.composite $ (,) <$> fieldM D.int4 <*> fieldM D.date
-        pat = D.composite $ (,,,,)
-          <$> fieldM D.int4
-          <*> (fieldM . arr) D.int4
-          <*> (fieldM . arr) D.int4
-          <*> fieldM D.int4
-          <*> fieldM D.date
+    rowDecoder =
+      rawResult <&> \(choreId, choreName, p, flex, strict, weekly, monthly) ->
+      let s = fromMaybe UnscheduledSS $ flex <|> strict <|> weekly <|> monthly
+      in Chore (ChoreId choreId) choreName s Nothing p
+    (<$$>) = fmap . fmap
+    rawResult = (,,,,,,)
+      <$> col D.uuid
+      <*> col D.text
+      <*> col participants
+      <*> (parseFlex <$$> simple)
+      <*> (parseStrict <$$> simple)
+      <*> (parseWeekly <$$> pat)
+      <*> (parseMonthly <$$> pat)
+    col = D.column . D.nonNullable
+    fieldN = D.field . D.nullable
+    arr = D.listArray . D.nonNullable
+    simple = sequenceT <$> col
+      (D.composite $ (,) <$> fieldN D.int4 <*> fieldN D.date)
+    pat = sequenceT <$> col
+      ( D.composite $ (,,,,)
+      <$> fieldN D.int4
+      <*> (fieldN . arr) D.int4
+      <*> (fieldN . arr) D.int4
+      <*> fieldN D.int4
+      <*> fieldN D.date
+      )
+    participants = D.composite $ toParticipants'
+      <$> (D.field . D.nonNullable) D.text
+      <*> (V.fromList <$> (D.field . D.nonNullable . arr) D.uuid)
+    parseFlex (days, scheduled) =
+      FlexDaysSS $ FlexDaysState (FlexDays $ fromIntegral days) scheduled
+    parseStrict (days, scheduled) =
+      StrictDaysSS $ StrictDaysState (StrictDays $ fromIntegral days) scheduled
+    parseWeekly (i, ei, ep, index, scheduled) =
+      let elemDays = map (toEnum . fromIntegral) ep
+          elems = loadNESetUnsafe $ zip (map fromIntegral ei) elemDays
+      in WeeklyPatternSS $ PatternState (Pattern elems $ fromIntegral i)
+         $ PatternPosition scheduled $ fromIntegral index
+    parseMonthly (i, ei, ep, index, scheduled) =
+      let elemDays = map (DayOfMonth . fromIntegral)  ep
+          elems = loadNESetUnsafe $ zip (map fromIntegral ei) elemDays
+      in MonthlyPatternSS $ PatternState (Pattern elems $ fromIntegral i)
+         $ PatternPosition scheduled $ fromIntegral index
     sql = [r|
       select
-        (c.id, c.name),
-        s.type,
+        c.id,
+        c.name,
+        (p.type, p.participants),
         (fd.days, fd.scheduled),
         (sd.days, sd.scheduled),
         (wp.iterations, wp.elem_iterations, wp.elem_points, wp.elem_index, wp.scheduled),
@@ -118,6 +123,15 @@ getFullChoresByHousehold = Statement sql encoder (D.rowVector rowDecoder) True
         join monthly_pattern_elem mpe on mp.id = mp.id
         group by mp.id, mpe.monthly_pattern_id
       ) mp on mp.id = s.id
+      join (
+        select
+          cpt.chore_id,
+          cpt.type,
+          array_remove(array_agg(cp.user_id), null) participants
+        from chore_participant_type cpt
+        left join chore_participant cp on cp.chore_id = cpt.chore_id
+        group by cpt.chore_id, cpt.type
+      ) p on p.chore_id = c.id
       where c.household_id = $1 :: uuid
       |]
 
@@ -204,6 +218,18 @@ insertParticipantMembers = Statement sql encoder D.noResult True
       (unChoreId >$< E.uuid)
       (unUserId >$< E.uuid)
 
+toParticipants :: (Text, V.Vector UUID) -> Participants
+toParticipants ("everyone", _) = Everyone
+toParticipants ("none", _) = None
+toParticipants ("some", ids) = Some $ loadNESetUnsafeV $ V.map UserId ids
+toParticipants _ = error "invalid participants constructor"
+
+toParticipants' :: Text -> V.Vector UUID -> Participants
+toParticipants' "everyone" _ = Everyone
+toParticipants' "none" _ = None
+toParticipants' "some" ids = Some $ loadNESetUnsafeV $ V.map UserId ids
+toParticipants' _ _ = error "invalid participants constructor"
+
 getChoreParticipants :: Statement ChoreId Participants
 getChoreParticipants =
   dimap unChoreId toParticipants
@@ -212,10 +238,5 @@ getChoreParticipants =
   from chore_participant_type cpt
   left join chore_participant cp on cp.chore_id = cpt.chore_id
   where cpt.chore_id = $1 :: uuid
-  group by cpt.type
-  limit 1|]
-  where
-    toParticipants ("everyone", _) = Everyone
-    toParticipants ("none", _) = None
-    toParticipants ("some", ids) = Some $ loadNESetUnsafeV $ V.map UserId ids
-    toParticipants _ = error "invalid participants constructor"
+  group by cpt.chore_id, cpt.type
+  |]

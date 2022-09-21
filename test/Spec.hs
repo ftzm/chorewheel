@@ -233,6 +233,13 @@ unitTests runS pool = testGroup "Query Tests"
       liftIO assertCompletes
   -- Schedule
   , testCase "Chore+Schedule round trip" $ runS $ do
+      userId1 <- UserId <$> liftIO nextRandom
+      userId2 <- UserId <$> liftIO nextRandom
+      userId3 <- UserId <$> liftIO nextRandom
+      Session.statement (User userId1 "test1" "test1") insertUser
+      Session.statement (User userId2 "test2" "test2") insertUser
+      Session.statement (User userId3 "test3" "test3") insertUser
+
       userId <- UserId <$> liftIO nextRandom
       Session.statement (User userId "test" "test") insertUser
       householdId <- HouseholdId <$> liftIO nextRandom
@@ -246,6 +253,13 @@ unitTests runS pool = testGroup "Query Tests"
       Session.statement (householdId, choreId2, "vacuum") insertChore
       Session.statement (householdId, choreId3, "dust") insertChore
       Session.statement (householdId, choreId4, "windows") insertChore
+
+      let participants = Some $ NESet.fromList $ fromList [userId1, userId2]
+      insertParticipants (choreId1, participants)
+      insertParticipants (choreId2, participants)
+      insertParticipants (choreId3, participants)
+      insertParticipants (choreId4, participants)
+
       today <- utctDay <$> liftIO getCurrentTime
       let flexdays = FlexDaysSS $ FlexDaysState (FlexDays 2) today
       let strict = StrictDaysSS $ StrictDaysState (StrictDays 2) today
@@ -263,7 +277,7 @@ unitTests runS pool = testGroup "Query Tests"
       output4 <- Session.statement choreId4 getSchedule
 
       allOutput <- Session.statement householdId getFullChoresByHousehold
-      --liftIO $ print allOutput
+      liftIO $ print allOutput
       liftIO $ V.length allOutput @?= 4
 
       Session.statement choreId1 deleteSchedule
@@ -358,13 +372,31 @@ unitTests runS pool = testGroup "Query Tests"
       Session.statement resolutions insertChoreEvents
       output <- Session.statement (choreId, addDays 2 today) getChoreEventsFrom
       liftIO $ length output @?= 5
-  , testCase "choreParticipantsRoundTrip" $ runS $ do
+  , testCase "choreParticipantsRoundTrip Everyone" $ runS $ do
       householdId <- HouseholdId <$> liftIO nextRandom
       choreId <- ChoreId <$> liftIO nextRandom
       Session.statement (Household householdId "home") insertHousehold
       Session.statement (householdId, choreId, "sweep") insertChore
 
       let participants = Everyone
+
+      insertParticipants (choreId, participants)
+      output <- Session.statement choreId getChoreParticipants
+      liftIO $ output @?= participants
+  , testCase "choreParticipantsRoundTrip Some" $ runS $ do
+      userId1 <- UserId <$> liftIO nextRandom
+      userId2 <- UserId <$> liftIO nextRandom
+      userId3 <- UserId <$> liftIO nextRandom
+      Session.statement (User userId1 "test1" "test1") insertUser
+      Session.statement (User userId2 "test2" "test2") insertUser
+      Session.statement (User userId3 "test3" "test3") insertUser
+
+      householdId <- HouseholdId <$> liftIO nextRandom
+      choreId <- ChoreId <$> liftIO nextRandom
+      Session.statement (Household householdId "home") insertHousehold
+      Session.statement (householdId, choreId, "sweep") insertChore
+
+      let participants = Some $ NESet.fromList $ fromList [userId1, userId2]
 
       insertParticipants (choreId, participants)
       output <- Session.statement choreId getChoreParticipants
