@@ -2,9 +2,6 @@
 
 module DB.Schedule where
 
-
---import Data.Time.Calendar (Day)
-
 import Chore
 import Contravariant.Extras.Contrazip
 import Data.Profunctor (dimap, lmap)
@@ -45,6 +42,15 @@ insertFlexDays =
     insert into flex_days (id, days, scheduled)
     values ($1 :: uuid, $2 :: int4, $3 :: date) |]
 
+updateFlexDaysState :: Statement (ChoreId, FlexDaysState) ()
+updateFlexDaysState =
+  lmap
+    (\(ChoreId i, FlexDaysState (FlexDays _) d) -> (i,  d))
+    [resultlessStatement|
+    update flex_days
+    set scheduled = $2 :: date
+    where id = $1 :: uuid|]
+
 insertStrictDays :: Statement (ChoreId, StrictDaysState) ()
 insertStrictDays =
   lmap
@@ -52,6 +58,15 @@ insertStrictDays =
     [resultlessStatement|
     insert into strict_days (id, days, scheduled)
     values ($1 :: uuid, $2 :: int4, $3 :: date) |]
+
+updateStrictDaysState :: Statement (ChoreId, StrictDaysState) ()
+updateStrictDaysState =
+  lmap
+    (\(ChoreId i, StrictDaysState (StrictDays _) d) -> (i,  d))
+    [resultlessStatement|
+    update strict_days
+    set scheduled = $2 :: date
+    where id = $1 :: uuid|]
 
 insertWeeklyPatternMain :: Statement (ChoreId, WeeklyPatternState) ()
 insertWeeklyPatternMain =
@@ -62,6 +77,18 @@ insertWeeklyPatternMain =
     [resultlessStatement|
     insert into weekly_pattern (id, iterations, elem_index, scheduled)
     values ($1 :: uuid, $2 :: int4, $3 :: int4, $4 :: date) |]
+
+updateWeeklyPatternState :: Statement (ChoreId, PatternPosition) ()
+updateWeeklyPatternState =
+  lmap
+    (\( ChoreId i ,(PatternPosition {day, index})) ->
+       (i, fromIntegral index, day))
+    [resultlessStatement|
+    update weekly_pattern
+    set
+      elem_index = $2 :: int4,
+      scheduled = $3 :: date
+    where id = $1 :: uuid|]
 
 insertWeeklyPatternElems :: Statement (V.Vector (ChoreId, Int, Weekday)) ()
 insertWeeklyPatternElems = Statement sql encoder Decoders.noResult True
@@ -98,6 +125,18 @@ insertMonthlyPatternMain =
     [resultlessStatement|
     insert into monthly_pattern (id, iterations, elem_index, scheduled)
     values ($1 :: uuid, $2 :: int4, $3 :: int4, $4 :: date) |]
+
+updateMonthlyPatternState :: Statement (ChoreId, PatternPosition) ()
+updateMonthlyPatternState =
+  lmap
+    (\( ChoreId i ,(PatternPosition {day, index})) ->
+       (i, fromIntegral index, day))
+    [resultlessStatement|
+    update monthly_pattern
+    set
+      elem_index = $2 :: int4,
+      scheduled = $3 :: date
+    where id = $1 :: uuid|]
 
 insertMonthlyPatternElems
   :: Statement (V.Vector (ChoreId, Int, DayOfMonth)) ()
@@ -214,3 +253,12 @@ deleteSchedule =
 updateSchedule :: (ChoreId, ScheduleState) -> Session.Session ()
 updateSchedule args@(choreId, _) =
   Session.statement choreId deleteSchedule >> insertSchedule args
+
+updateSchedule' :: (ChoreId, ScheduleState) -> Session.Session ()
+updateSchedule' (choreId, s') =
+  case s' of
+    FlexDaysSS s -> Session.statement (choreId, s) updateFlexDaysState
+    StrictDaysSS s -> Session.statement (choreId, s) updateStrictDaysState
+    WeeklyPatternSS (PatternState _ s) -> Session.statement (choreId, s) updateWeeklyPatternState
+    MonthlyPatternSS (PatternState _ s) -> Session.statement (choreId, s) updateMonthlyPatternState
+    UnscheduledSS -> pure ()

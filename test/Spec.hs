@@ -53,9 +53,9 @@ assertThrows check comp =
        "expected exception but computation finished normally"
   in handle check runComp
 
-fromRight :: Either a b -> b
+fromRight :: Show a => Either a b -> b
 fromRight (Right a) = a
-fromRight (Left _)  = error "unexpected Left"
+fromRight (Left a)  = error $ show a
 
 withPool' :: Pool.Pool -> Session.Session a -> IO a
 withPool' p s = Pool.use p s >>= either throwM return
@@ -286,6 +286,65 @@ unitTests runS pool = testGroup "Query Tests"
       liftIO $ StrictDaysS (StrictDays 2) @?= output2
       liftIO $ WeeklyPatternS weeklyPattern @?= output3
       liftIO $ MonthlyPatternS monthlyPattern @?= output4
+  , testCase "Chore update" $ runS $ do
+      userId1 <- UserId <$> liftIO nextRandom
+      userId2 <- UserId <$> liftIO nextRandom
+      userId3 <- UserId <$> liftIO nextRandom
+      Session.statement (User userId1 "test1" "test1") insertUser
+      Session.statement (User userId2 "test2" "test2") insertUser
+      Session.statement (User userId3 "test3" "test3") insertUser
+
+      userId <- UserId <$> liftIO nextRandom
+      Session.statement (User userId "test" "test") insertUser
+      householdId <- HouseholdId <$> liftIO nextRandom
+      Session.statement (Household householdId "home") insertHousehold
+      Session.statement (householdId, userId) insertHouseholdMember
+      choreId1 <- ChoreId <$> liftIO nextRandom
+      choreId2 <- ChoreId <$> liftIO nextRandom
+      choreId3 <- ChoreId <$> liftIO nextRandom
+      choreId4 <- ChoreId <$> liftIO nextRandom
+      Session.statement (householdId, choreId1, "a sweep") insertChore
+      Session.statement (householdId, choreId2, "b vacuum") insertChore
+      Session.statement (householdId, choreId3, "c dust") insertChore
+      Session.statement (householdId, choreId4, "d windows") insertChore
+
+
+      let participants = Some $ NESet.fromList $ fromList [userId1, userId2]
+      insertParticipants (choreId1, participants)
+      insertParticipants (choreId2, participants)
+      insertParticipants (choreId3, participants)
+      insertParticipants (choreId4, participants)
+
+      today <- utctDay <$> liftIO getCurrentTime
+      let flex = FlexDaysSS $ FlexDaysState (FlexDays 2) today
+      let strict = StrictDaysSS $ StrictDaysState (StrictDays 2) today
+      let weeklyPattern = Pattern (loadNESetUnsafe [(1, Mon), (2, Tue)]) 2
+      let weekly = WeeklyPatternSS $ fromRight $ nextEligibleDayWeekly weeklyPattern 1 today
+      let monthlyPattern = Pattern (loadNESetUnsafe [(1, DayOfMonth 10), (2, DayOfMonth 20)]) 2
+      let monthly = MonthlyPatternSS $ fromRight $ nextEligibleDayMonthly monthlyPattern 1 today
+      --let chore1 = Chore choreId1 "sweep" flexdays Nothing participants
+      --let chore2 = Chore choreId2 "vacuum" strict Nothing participants
+      --let chore3 = Chore choreId3 "dust" weekly Nothing participants
+      --let chore4 = Chore choreId4 "windows" monthly Nothing participants
+      insertSchedule (choreId1, flex)
+      insertSchedule (choreId2, strict)
+      insertSchedule (choreId3, weekly)
+      insertSchedule (choreId4, monthly)
+
+      let resolution = Resolution today $ Completed userId
+      let (_, nextFlex) = fromRight $ resolveSchedule flex Nothing resolution
+      let (_, nextStrict) = fromRight $ resolveSchedule strict Nothing resolution
+      let (_, nextWeekly) = fromRight $ resolveSchedule weekly Nothing resolution
+      let (_, nextMonthly) = fromRight $ resolveSchedule monthly Nothing resolution
+
+      updateSchedule' (choreId1, nextFlex)
+      updateSchedule' (choreId2, nextStrict)
+      updateSchedule' (choreId3, nextWeekly)
+      updateSchedule' (choreId4, nextMonthly)
+
+      ss <- map (.schedule) . V.toList <$> Session.statement householdId getFullChoresByHousehold
+
+      liftIO $ ss @?= [nextFlex, nextStrict, nextWeekly, nextMonthly]
   , testCase "resolve flex chore" $ do
       today <- utctDay <$> liftIO getCurrentTime
 

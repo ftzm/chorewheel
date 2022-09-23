@@ -133,6 +133,7 @@ getFullChoresByHousehold = Statement sql encoder (D.rowVector rowDecoder) True
         group by cpt.chore_id, cpt.type
       ) p on p.chore_id = c.id
       where c.household_id = $1 :: uuid
+      order by c.name
       |]
 
 insertChoreEvents

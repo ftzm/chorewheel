@@ -51,6 +51,7 @@ data PatternError
 data PatternStateError
   = IndexOutOfBounds
   | DayInvalid
+  deriving Show
 
 -- mkWeeklyPatternState
 --   :: Int
