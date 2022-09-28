@@ -13,7 +13,8 @@ module Schedule
   , resolveSchedule
   , futureStates
   , nextEligibleDay
-
+  , scheduleStateWindow
+  , ssDay
 
   , PosNeg (..)
   , pattern Smarter
@@ -167,6 +168,19 @@ nextEligibleDay day (StrictDaysS s) = return $ StrictDaysSS $ StrictDaysState s 
 nextEligibleDay day (WeeklyPatternS s) = WeeklyPatternSS <$> nextEligibleDayWeekly s 0 day
 nextEligibleDay day (MonthlyPatternS s) = MonthlyPatternSS <$> nextEligibleDayMonthly s 0 day
 nextEligibleDay _ _ = return UnscheduledSS
+
+ssDay :: ScheduleState -> Maybe Day
+ssDay (FlexDaysSS (FlexDaysState _ d)) = Just d
+ssDay (StrictDaysSS (StrictDaysState _ d)) = Just d
+ssDay (WeeklyPatternSS wp) = Just $ getDay wp
+ssDay (MonthlyPatternSS wp) = Just $ getDay wp
+ssDay UnscheduledSS = Nothing
+
+scheduleStateWindow :: Day -> Day -> ScheduleState -> [ScheduleState]
+scheduleStateWindow from until s =
+  takeWhile (maybe False (<=until) . ssDay)
+  $ dropWhile (maybe False (from>) . ssDay)
+  $ s : futureStates s
 
 ---
 -- I could use pattern synonyms to hide the constructors

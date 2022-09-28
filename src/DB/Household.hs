@@ -7,11 +7,13 @@ import Hasql.Statement (Statement(..))
 import Hasql.TH
 import Models (Household(..), HouseholdId(..), HouseholdMembers(..), User(..), UserId(..))
 import qualified Data.Vector as V
+import Data.UUID (UUID)
 import DB.Util
+import Data.Tuple.Sequence
 
-insertHousehold :: Statement Household ()
+insertHousehold :: Statement (HouseholdId, Text) ()
 insertHousehold =
-  lmap (\Household{..} -> ( unHouseholdId id', name))
+  lmap (\(HouseholdId id', name) -> (id', name))
   [resultlessStatement|
     insert into household (id, name)
     values ($1 :: uuid, $2 :: text)|]
@@ -25,12 +27,37 @@ insertHouseholdMember =
 
 getUserHouseholds :: Statement UserId (V.Vector Household)
 getUserHouseholds =
-  dimap unUserId (fmap (\(i, n) -> Household (HouseholdId i) n))
+  dimap unUserId decoder
   [vectorStatement|
-    select h.id :: uuid, h.name :: text
-    from household h
-    join household_member hm on hm.household_id = h.id
-    where hm.user_id = $1 :: uuid |]
+  select
+    id :: uuid,
+    name :: text,
+    user_ids :: uuid[],
+    names :: text[],
+    emails :: text[]
+  from (select
+    h.id,
+    h.name,
+    array_agg(u.id) as user_ids,
+    array_agg(u.name) as names,
+    array_agg(u.email) as emails
+  from household h
+  join household_member hm on h.id = hm.household_id
+  join "user" u on hm.user_id = u.id
+  group by h.id, h.name) as households
+  where ($1 :: uuid) = any (households.user_ids)
+  |]
+  where
+    decoder
+      :: V.Vector (UUID, Text, V.Vector UUID, V.Vector Text, V.Vector Text)
+      -> V.Vector Household
+    decoder = V.map $ \(i, name, userIds, names, emails) ->
+      let members = loadMembers $ V.zip3 userIds names emails
+      in Household (HouseholdId i) name members
+    loadMembers =
+      HouseholdMembers
+      . loadNESetUnsafeV
+      . V.map (\(i, n, e) -> User (UserId i) n e)
 
 isHouseholdMember :: Statement (UserId, HouseholdId) Bool
 isHouseholdMember =
@@ -79,6 +106,42 @@ getHouseholdMembers =
   join "user" u on hm.user_id = u.id
   where hm.household_id = $1 :: uuid|]
   where
+    loadMembers =
+      HouseholdMembers
+      . loadNESetUnsafeV
+      . V.map (\(i, n, e) -> User (UserId i) n e)
+
+getHouseholdByName :: Statement (UserId, Text) (Maybe Household)
+getHouseholdByName =
+  dimap (\(UserId i, name) -> (i, name)) (fmap decoder . sequenceT)
+  [singletonStatement|
+  select
+    id :: uuid?,
+    name :: text?,
+    user_ids :: uuid[]?,
+    names :: text[]?,
+    emails :: text[]?
+  from (select
+    h.id,
+    h.name,
+    array_agg(u.id) as user_ids,
+    array_agg(u.name) as names,
+    array_agg(u.email) as emails
+  from household h
+  join household_member hm on h.id = hm.household_id
+  join "user" u on hm.user_id = u.id
+  group by h.id, h.name) as households
+  where ($1 :: uuid) = any (households.user_ids)
+  and households.name = $2 :: text
+  limit 1
+  |]
+  where
+    decoder
+      :: (UUID, Text, V.Vector UUID, V.Vector Text, V.Vector Text)
+      -> Household
+    decoder (i, name, userIds, names, emails) =
+      let members = loadMembers $ V.zip3 userIds names emails
+      in Household (HouseholdId i) name members
     loadMembers =
       HouseholdMembers
       . loadNESetUnsafeV

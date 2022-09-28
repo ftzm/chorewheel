@@ -7,7 +7,9 @@ import Lucid
 import Control.Monad.Error.Class
 import Data.UUID
 import qualified Data.Text as T
-import Data.Time.Calendar (Day)
+import Data.Time.Calendar (Day, addDays)
+import qualified Data.Map as M
+import qualified Data.Map.Merge.Strict as MM
 
 import Models
 --import App
@@ -59,6 +61,7 @@ choreWheelApi = ChoreWheelApi
   , _removeMonthRow = removeMonthRowHandler
   , _createChore = createChoreHandler
   , _landing = landingHandler
+  , _household = handleHousehold
   , _static = serveDirectoryWebApp "static"
   }
 
@@ -180,3 +183,40 @@ createChoreHandler userId householdId payload = do
   chore <- either (const $ error "Invalid chore") return $ toChore payload newUUID today
   _ <- saveChore userId householdId chore
   return $ toHtml @Text $ show chore
+
+
+catMaybeFst :: [(Maybe a, b)] -> [(a, b)]
+catMaybeFst xs = [ (a, b) | (Just a, b) <- xs]
+
+mergeMapWith :: Ord k => (a -> b -> c) -> Map k a -> Map k b -> Map k c
+mergeMapWith f =
+  MM.merge MM.dropMissing MM.dropMissing (MM.zipWithMatched $ const f)
+
+handleHousehold
+  :: MonadError ServerError m
+  => HouseholdM m
+  => ChoreM m
+  => TimeM m
+  => LogM m
+  => UserId
+  -> Text
+  -> m (Html ())
+handleHousehold userId householdName = do
+  householdM <- householdFromName userId householdName
+  case householdM of
+    Nothing -> throwError err401
+    Just household -> do
+      cs <- getFullChores household.id'
+      from <- addDays (-10) . utctDay <$> now
+      let until = addDays 15 from
+      let days = [from..until]
+      resolutions <- choreEvents userId household.id' from until
+      let scheduleStates = M.fromList $ map (\c -> (c.id', c)) cs
+      let scheduled = M.elems $ mergeMapWith (\rs c ->
+                              let
+                                ds = catMaybes $ map ssDay $ scheduleStateWindow from until $ c.schedule
+                                rotation = cycle $ genRotation rs household.members c.participants
+                                dayMap = M.fromList $ zip ds rotation
+                              in (c, map (\d -> M.lookup d dayMap) days)
+                              ) resolutions scheduleStates
+      return $ householdPage days scheduled

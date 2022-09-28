@@ -16,6 +16,7 @@ module Schedule.Pattern
   , createPattern
   , createWeeklyState
   , createMonthlyState
+  , getDay
   ) where
 
 import Data.Set.NonEmpty (NESet, size, elemAt)

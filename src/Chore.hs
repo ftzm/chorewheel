@@ -1,11 +1,11 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE DeriveAnyClass #-}
+
 module Chore where
 
 import GHC.Records (HasField)
 import Data.Time.Clock
-import Data.Time.Calendar
 import Data.UUID
 import Data.Generics.Internal.VL.Lens
 import Data.Generics.Labels() --instance declarations
@@ -22,7 +22,7 @@ import Models
 -- second date.
 newtype Period = UTCTime UTCTime
 
-newtype ChoreId = ChoreId { unChoreId :: UUID} deriving (Eq, Show)
+newtype ChoreId = ChoreId { unChoreId :: UUID} deriving (Eq, Ord, Show)
 
 data Chore = Chore
   { id' :: ChoreId
@@ -49,9 +49,6 @@ data ChoreStatus
   -- today the chore should have been scheduled n additional times.
   | Overdue Int
 
-newtype Scheduled = Scheduled { unScheduled :: Day}
-newtype Resolved = Resolved { unResolved :: Day}
-
 data ChoreNameExists = ChoreNameExists
   deriving Show
 instance Exception ChoreNameExists
@@ -73,8 +70,8 @@ doChore c@Chore {..} resolution =
 enrichById :: (Foldable t, Eq b, HasField "id'" a b) => t a -> [b] -> [a]
 enrichById s = catMaybes . map (\i -> find ((i==) . (.id')) s)
 
-rotation :: [Resolution] -> HouseholdMembers -> Participants -> [User]
-rotation resolutions (HouseholdMembers hm) participants =
+genRotation :: [Resolution] -> HouseholdMembers -> Participants -> [User]
+genRotation resolutions (HouseholdMembers hm) participants =
   enrichById hm order
   where
     participantSet = case participants of

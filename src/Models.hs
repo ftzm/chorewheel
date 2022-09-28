@@ -82,14 +82,16 @@ newtype HouseholdId  = HouseholdId { unHouseholdId :: UUID }
   deriving (Show, Eq)
   deriving newtype (ToHttpApiData, FromHttpApiData)
 
-data Household  = Household
-  { id' :: HouseholdId
-  , name :: Text
-  } deriving (Show, Eq, Generic)
-
 newtype HouseholdMembers =
   HouseholdMembers { unHouseholdMembers :: NESet.NESet User }
   deriving (Show, Eq)
+
+data Household  = Household
+  { id' :: HouseholdId
+  , name :: Text
+  , members :: HouseholdMembers
+  } deriving (Show, Eq, Generic)
+
 
 data Clash = Clash { name :: Text }
 

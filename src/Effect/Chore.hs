@@ -5,6 +5,8 @@ module Effect.Chore where
 
 import qualified Hasql.Session as HS
 import qualified Data.Vector as V
+import qualified Data.Map as M
+import Data.Time.Calendar (Day)
 import Control.Monad.Catch
 
 import Models
@@ -36,10 +38,21 @@ resolveChoreImpl _ _ c r = do
     HS.statement (V.fromList $ map (c.id',) rs) insertChoreEvents
     updateSchedule' (c.id', ss)
 
+choreEventsImpl
+  :: (WithDb r m)
+  => UserId
+  -> HouseholdId
+  -> Day
+  -> Day
+  -> m (M.Map ChoreId [Resolution])
+choreEventsImpl _ hId from to = do
+    runPool $ HS.statement (hId, from, to) getHouseholdChoreEventsFromTo
+
 class Monad m => ChoreM m where
   getFullChores :: HouseholdId -> m [Chore]
   saveChore :: UserId -> HouseholdId -> Chore -> m ()
   resolveChore :: UserId -> HouseholdId -> Chore -> Resolution -> m ()
+  choreEvents :: UserId -> HouseholdId -> Day -> Day -> m (M.Map ChoreId [Resolution])
 
 newtype ChoreT m a = ChoreT (m a)
   deriving newtype (Functor, Applicative, Monad, MonadIO, MonadReader r, MonadThrow)
@@ -48,3 +61,4 @@ instance (WithDb r m) => ChoreM (ChoreT m) where
   getFullChores = getFullChoresImpl
   saveChore = saveChoreImpl
   resolveChore = resolveChoreImpl
+  choreEvents = choreEventsImpl

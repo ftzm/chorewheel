@@ -92,6 +92,11 @@ data ChoreWheelApi mode = ChoreWheelApi
       :> Post '[HTML] (Html ())
   , _landing :: mode
       :- Get '[HTML] (Html ())
+  , _household ::mode
+      :- AuthProtect "session-auth"
+      :> "household"
+      :> Capture "householdName" Text
+      :> Get '[HTML] (Html ())
   , _static :: mode
       :- "static"
       :> Raw

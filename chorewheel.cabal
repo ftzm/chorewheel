@@ -131,6 +131,8 @@ library
 executable chorewheel-exe
   import: common-options
   main-is: Main.hs
+  build-depends:
+    , chorewheel
   other-modules:
       Paths_chorewheel
   autogen-modules:

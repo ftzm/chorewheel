@@ -79,6 +79,8 @@ CREATE TABLE IF NOT EXISTS chore_event (
   FOREIGN KEY (chore_id) REFERENCES chore
 );
 
+CREATE UNIQUE INDEX chore_event_day_unique ON chore_event (chore_id, day);
+
 CREATE TABLE IF NOT EXISTS chore_participant_type (
   chore_id UUID NOT NULL REFERENCES chore,
   type text NOT NULL

@@ -6,6 +6,7 @@ import Hasql.Statement (Statement(..))
 import Hasql.TH
 import Data.Profunctor (lmap, dimap)
 import qualified Data.Vector as V
+import qualified Data.Map as M
 import Text.RawString.QQ
 import qualified Hasql.Encoders as E
 import qualified Hasql.Decoders as D
@@ -172,9 +173,11 @@ getChoreEvents =
 -- Includes the last resolution before the range to be able to generate a
 -- complete history for the range (i.e. to be able to show if the first
 -- completion in the range was overdue)
-getChoreEventsFrom :: Statement (ChoreId, Day) (V.Vector Resolution)
-getChoreEventsFrom =
-  dimap (first unChoreId) (V.map (\(d, c, userIdO) -> Resolution d (toResolutionType c userIdO)))
+getChoreEventsFromTo :: Statement (ChoreId, Day, Day) (V.Vector Resolution)
+getChoreEventsFromTo =
+  dimap
+    (\(a, b, c) -> (unChoreId a, b, c))
+    (V.map (\(d, c, userIdO) -> Resolution d (toResolutionType c userIdO)))
   [vectorStatement|
   select day :: date, type :: text, user_id :: uuid?
   from chore_event
@@ -184,7 +187,38 @@ getChoreEventsFrom =
     from chore_event
     where chore_id = $1 :: uuid
     and day < $2 :: date
-  )|]
+  )
+  and day <= $3 :: date
+  |]
+
+
+toMonoidMap :: (Ord a, Applicative m, Monoid (m b)) => [(a, b)] -> M.Map a (m b)
+toMonoidMap =  M.fromListWith (<>) . map (fmap pure)
+
+getHouseholdChoreEventsFromTo :: Statement (HouseholdId, Day, Day) (M.Map ChoreId [Resolution])
+getHouseholdChoreEventsFromTo =
+  dimap
+    (\(a, b, c) -> (unHouseholdId a, b, c))
+    decoder
+    --(toMonoidMap . V.toList . V.map
+    -- (\(cId, d, c, userIdO) ->
+    --     (ChoreId cId, Resolution d (toResolutionType c userIdO))))
+  [vectorStatement|
+  select c.id :: uuid, e.day :: date?, e.type :: text?, e.user_id :: uuid?
+  from chore c
+  left join chore_event e
+    on c.id = e.chore_id
+    and e.day >= $2 :: date
+    and e.day <= $3 :: date
+  where c.household_id = $1 :: uuid
+  order by e.day
+  |]
+  where
+    decoder :: V.Vector (UUID, Maybe Day, Maybe Text, Maybe UUID) -> M.Map ChoreId [Resolution]
+    decoder = M.fromListWith (<>) . toList . V.map decoder'
+    decoder' :: (UUID, Maybe Day, Maybe Text, Maybe UUID) -> (ChoreId, [Resolution])
+    decoder' (cId, Just d, Just t, uIdM) = (ChoreId cId, [Resolution d (toResolutionType t uIdM)])
+    decoder' (cId, _, _, _) = (ChoreId cId, [])
 
 insertParticipants :: (ChoreId, Participants) -> Session.Session ()
 insertParticipants args = do
@@ -220,10 +254,7 @@ insertParticipantMembers = Statement sql encoder D.noResult True
       (unUserId >$< E.uuid)
 
 toParticipants :: (Text, V.Vector UUID) -> Participants
-toParticipants ("everyone", _) = Everyone
-toParticipants ("none", _) = None
-toParticipants ("some", ids) = Some $ loadNESetUnsafeV $ V.map UserId ids
-toParticipants _ = error "invalid participants constructor"
+toParticipants = uncurry toParticipants'
 
 toParticipants' :: Text -> V.Vector UUID -> Participants
 toParticipants' "everyone" _ = Everyone
