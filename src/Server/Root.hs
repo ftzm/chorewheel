@@ -10,6 +10,7 @@ import qualified Data.Text as T
 import Data.Time.Calendar (Day, addDays)
 import qualified Data.Map as M
 import qualified Data.Map.Merge.Strict as MM
+import Data.List
 
 import Models
 --import App
@@ -202,21 +203,15 @@ handleHousehold
   -> Text
   -> m (Html ())
 handleHousehold userId householdName = do
-  householdM <- householdFromName userId householdName
-  case householdM of
-    Nothing -> throwError err401
-    Just household -> do
-      cs <- getFullChores household.id'
-      from <- addDays (-10) . utctDay <$> now
-      let until = addDays 15 from
-      let days = [from..until]
-      resolutions <- choreEvents userId household.id' from until
-      let scheduleStates = M.fromList $ map (\c -> (c.id', c)) cs
-      let scheduled = M.elems $ mergeMapWith (\rs c ->
-                              let
-                                ds = catMaybes $ map ssDay $ scheduleStateWindow from until $ c.schedule
-                                rotation = cycle $ genRotation rs household.members c.participants
-                                dayMap = M.fromList $ zip ds rotation
-                              in (c, map (\d -> M.lookup d dayMap) days)
-                              ) resolutions scheduleStates
-      return $ householdPage days scheduled
+  household <- justOrErr err401 =<< householdFromName userId householdName
+  cs <- getFullChores household.id'
+  from <- addDays (-10) . utctDay <$> now
+  let until = addDays 15 from
+  let days = [from..until]
+  resolutions <- choreEvents userId household.id' from until
+  return $ householdPage days $ flip map cs $ \c ->
+    let stateDays =
+          mapMaybe ssDay $ scheduleStateWindow from until $ c.schedule
+        crs = fromMaybe [] $ M.lookup c.id' resolutions
+        rotation = genRotation crs household.members c.participants
+    in (c, map (flip lookup (zip stateDays rotation)) days)

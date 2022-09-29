@@ -72,7 +72,7 @@ enrichById s = catMaybes . map (\i -> find ((i==) . (.id')) s)
 
 genRotation :: [Resolution] -> HouseholdMembers -> Participants -> [User]
 genRotation resolutions (HouseholdMembers hm) participants =
-  enrichById hm order
+  cycle $ enrichById hm order
   where
     participantSet = case participants of
       Some ps -> NESet.toSet ps
