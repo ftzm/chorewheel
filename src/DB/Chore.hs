@@ -191,18 +191,11 @@ getChoreEventsFromTo =
   and day <= $3 :: date
   |]
 
-
-toMonoidMap :: (Ord a, Applicative m, Monoid (m b)) => [(a, b)] -> M.Map a (m b)
-toMonoidMap =  M.fromListWith (<>) . map (fmap pure)
-
 getHouseholdChoreEventsFromTo :: Statement (HouseholdId, Day, Day) (M.Map ChoreId [Resolution])
 getHouseholdChoreEventsFromTo =
   dimap
     (\(a, b, c) -> (unHouseholdId a, b, c))
     decoder
-    --(toMonoidMap . V.toList . V.map
-    -- (\(cId, d, c, userIdO) ->
-    --     (ChoreId cId, Resolution d (toResolutionType c userIdO))))
   [vectorStatement|
   select c.id :: uuid, e.day :: date?, e.type :: text?, e.user_id :: uuid?
   from chore c
@@ -214,11 +207,13 @@ getHouseholdChoreEventsFromTo =
   order by e.day
   |]
   where
-    decoder :: V.Vector (UUID, Maybe Day, Maybe Text, Maybe UUID) -> M.Map ChoreId [Resolution]
-    decoder = M.fromListWith (<>) . toList . V.map decoder'
-    decoder' :: (UUID, Maybe Day, Maybe Text, Maybe UUID) -> (ChoreId, [Resolution])
-    decoder' (cId, Just d, Just t, uIdM) = (ChoreId cId, [Resolution d (toResolutionType t uIdM)])
-    decoder' (cId, _, _, _) = (ChoreId cId, [])
+    decoder
+      :: V.Vector (UUID, Maybe Day, Maybe Text, Maybe UUID)
+      -> M.Map ChoreId [Resolution]
+    decoder = M.fromListWith (<>) . toList . V.map \case
+      (cId, Just d, Just t, uIdM) ->
+        (ChoreId cId, [Resolution d (toResolutionType t uIdM)])
+      (cId, _, _, _) -> (ChoreId cId, [])
 
 insertParticipants :: (ChoreId, Participants) -> Session.Session ()
 insertParticipants args = do

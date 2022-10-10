@@ -10,6 +10,7 @@ module Log
   , logResource
   , logRequests
   , logIO
+  , logInfoIO
   ) where
 
 import Data.Generics.Product.Typed
@@ -104,6 +105,10 @@ toRequestLog req res = RequestLog
 logIO :: LogEnv -> Namespace -> Text -> IO ()
 logIO logEnv namespace msg =
   runKatipContextT logEnv () namespace $ logFM ErrorS $ logStr msg
+
+logInfoIO :: LogEnv -> Namespace -> Text -> IO ()
+logInfoIO logEnv namespace msg =
+  runKatipContextT logEnv () namespace $ logFM InfoS $ logStr msg
 
 logRequests :: LogEnv -> Namespace -> (Application -> Application)
 logRequests logEnv namespace baseApp =

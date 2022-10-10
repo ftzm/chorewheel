@@ -13,6 +13,7 @@ import Models
 import Page.Attribute
 import Page.Common
 import Chore
+import Schedule
 
 householdsFragment :: [Household] -> Html ()
 householdsFragment households =
@@ -39,15 +40,37 @@ householdsPage households =
 
 --------------------------------------------------------------------------------
 
-householdPage :: [Day] -> [(Chore, [Maybe User])] -> Html ()
-householdPage days chores =
+data CellType = ResolutionCell Resolution | ScheduledCell User
+
+householdPage
+  :: ([Day], Day, [Day])
+  -> ([(Chore, [Maybe CellType], Maybe CellType, [Maybe CellType])])
+  -> Html ()
+householdPage (pastDays, today, futureDays) choreRows =
   container "Household" $
   --table_ [class_ "table-auto border-collapse border border-slate-400 "] $ thead_ $ do
   table_ [class_ "table-auto"] $ thead_ $ do
     tr_ $ do
       th_  ""
-      mconcat $ map (th_ [class_ "p-2 border border-slate-300"] . toHtml . show @Text) days
-    mconcat $ flip map chores $ \(c, ss) -> do
-      tr_ $ do
-        (th_ [class_ "p-2 border border-slate-300"] . toHtml . (.name)) c
-        mconcat $ map (th_ [class_ "p-2 border border-slate-300"] . toHtml . (\x -> maybe "" (.name)  x )) ss
+      mconcat $ map (th_ [class_ "p-2 bg-slate-200 border border-slate-300"] . toHtml . show @Text) pastDays
+      th_ [class_ "p-2 bg-blue-300 border border-slate-300"] . toHtml $ show @Text today
+      mconcat $ map (th_ [class_ "p-2 bg-slate-200 border border-slate-300"] . toHtml . show @Text) futureDays
+      mconcat $ flip map choreRows $ \(c, pds, t, fds) -> do
+        tr_ $ do
+          (th_ [class_ "p-2 bg-slate-100 border border-slate-300"] . toHtml . (.name)) c
+          mconcat $ map (renderCell "") pds
+          renderCell "bg-blue-100" t
+          mconcat $ map (renderCell "") fds
+  where
+    renderCell :: Text -> Maybe CellType -> Html ()
+    renderCell bg c = case c of
+      Nothing ->
+        td_ [class_ $ "p-2 border border-slate-300 text-center " <> bg]
+        . toHtml @Text $ ""
+      Just c' -> case c' of
+        ResolutionCell _ ->
+          td_ [class_ $ "p-2 border border-slate-300 text-center " <> bg]
+          . toHtml @Text $ "resolved"
+        ScheduledCell u ->
+          td_ [class_ $ "p-2 border border-slate-300 text-center " <> bg]
+          . toHtml @Text $ ((.name) u <> " ( )")

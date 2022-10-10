@@ -50,6 +50,8 @@ choreWheelApp f = genericServeTWithContext f choreWheelApi ctx
 runApp :: IO ()
 runApp = runResourceT $ do
   pool <- dbResource
+  userId <- liftIO $ UserId <$> nextRandom
+  liftIO $ HP.use pool ( HS.statement (User userId "stina" "s@test.com") insertUser)
   --_ <- liftIO $ createTestUser pool
   (logEnv, logContext, logNamespace) <- logResource "ChoreWheel" "production"
   let env = AppEnv pool logEnv logContext logNamespace
@@ -59,6 +61,7 @@ runApp = runResourceT $ do
   let warpSettings = defaultSettings
         & setPort 8080
         & setOnException warpLog
+  liftIO $ logInfoIO logEnv logNamespace "Chorewheel started"
   liftIO
     $ runSettings warpSettings
     $ logRequests logEnv logNamespace

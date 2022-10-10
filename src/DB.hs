@@ -37,7 +37,7 @@ makeConnStr PostgresConfig {..} =
 createPool :: IO HP.Pool
 createPool = parsePostgresConfig >>= \case
   Left e -> die $ "Error creating Postgresql Connection Pool: " <> e
-  Right c -> HP.acquire 10 $ makeConnStr c
+  Right c -> HP.acquire 10 Nothing $ makeConnStr c
 
 -- TODO: Handle db errors better
 runPool :: WithDb r m => HS.Session a -> m a

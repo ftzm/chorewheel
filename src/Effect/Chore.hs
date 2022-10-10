@@ -46,7 +46,7 @@ choreEventsImpl
   -> Day
   -> m (M.Map ChoreId [Resolution])
 choreEventsImpl _ hId from to = do
-    runPool $ HS.statement (hId, from, to) getHouseholdChoreEventsFromTo
+  runPool $ HS.statement (hId, from, to) getHouseholdChoreEventsFromTo
 
 class Monad m => ChoreM m where
   getFullChores :: HouseholdId -> m [Chore]

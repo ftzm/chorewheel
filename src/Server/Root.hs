@@ -205,13 +205,24 @@ handleHousehold
 handleHousehold userId householdName = do
   household <- justOrErr err401 =<< householdFromName userId householdName
   cs <- getFullChores household.id'
-  from <- addDays (-10) . utctDay <$> now
+  today <- utctDay <$> now
+  let from = addDays (-10) today
   let until = addDays 15 from
-  let days = [from..until]
-  resolutions <- choreEvents userId household.id' from until
-  return $ householdPage days $ flip map cs $ \c ->
-    let stateDays =
-          mapMaybe ssDay $ scheduleStateWindow from until $ c.schedule
-        crs = fromMaybe [] $ M.lookup c.id' resolutions
-        rotation = genRotation crs household.members c.participants
-    in (c, map (flip lookup (zip stateDays rotation)) days)
+  let pastDays = [from..(addDays (-1) today)]
+  let futureDays = [(addDays 1 today)..until]
+  let dayTuple = (pastDays, today, futureDays)
+  --resolutions <- choreEvents userId household.id' from until
+  rotationResolutions <-
+    choreEvents userId household.id' (addDays (-365) today) today
+  let input = flip map cs $ \c ->
+        let stateDays =
+              mapMaybe ssDay $ scheduleStateWindow from until $ c.schedule
+            crs = fromMaybe [] $ M.lookup c.id' rotationResolutions
+            rotation =
+              map ScheduledCell $ genRotation crs household.members c.participants
+        in ( c
+           , map (flip lookup (zip stateDays rotation)) pastDays
+           , lookup today (zip stateDays rotation)
+           , map (flip lookup (zip stateDays rotation)) futureDays
+           )
+  return $ householdPage dayTuple input

@@ -11,6 +11,7 @@ copyright:      Matthew Fitzsimmons
 license:        BSD-3-Clause
 build-type:     Simple
 
+
 source-repository head
   type: git
   location: https://github.com/ftzm/chorewheel
@@ -25,6 +26,7 @@ common common-options
       DuplicateRecordFields
       OverloadedRecordDot
       KindSignatures
+      BlockArguments
   build-depends:
       aeson
     , base >=4.7 && <5
@@ -50,7 +52,7 @@ common common-options
     , monad-control
     , monad-logger
     , mtl
-    , nonempty-containers
+    , nonempty-containers >= 0.3.4.4
     , process
     , profunctors
     , raw-strings-qq
@@ -72,6 +74,9 @@ common common-options
     , wai
     , warp
     , word8
+    -- test stuff because otherwise hls doesn't work :(
+    , tasty
+    , tasty-hunit
   mixins:
       base hiding (Prelude)
     , relude (Relude as Prelude)

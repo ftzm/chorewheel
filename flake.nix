@@ -26,6 +26,7 @@
               lsof
               expect
               entr
+              haskellPackages.hoogle
             ];
         };
         overlays = [

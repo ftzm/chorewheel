@@ -88,7 +88,7 @@ rollBackOnError p s =
 createTestPool :: DB -> IO Pool.Pool
 createTestPool db = do
   let connStr = toConnectionString db
-  pool <- Pool.acquire 10 connStr
+  pool <- Pool.acquire 10 Nothing connStr
   migration <- readFile "migration/init.sql"
   Pool.use pool $ Session.sql migration
   return pool
@@ -181,7 +181,7 @@ unitTests runS pool = testGroup "Query Tests"
       Session.statement (User userId "test" "test") insertUser
       householdId <- HouseholdId <$> liftIO nextRandom
       let members = HouseholdMembers $ NESet.fromList $ fromList [User userId "test" "test"]
-      Session.statement (Household householdId "home" members) insertHousehold
+      Session.statement (householdId, "home") insertHousehold
       Session.statement (householdId, userId) insertHouseholdMember
       result <- Session.statement userId getUserHouseholds
       liftIO $ V.head result @?= Household householdId "home" members
@@ -196,12 +196,12 @@ unitTests runS pool = testGroup "Query Tests"
       userId2 <- UserId <$> liftIO nextRandom
       let user1 = User userId1 "test1" "test1"
       let user2 = User userId2 "test2" "test2"
-      let members = HouseholdMembers $ NESet.fromList $ fromList [user1, user2]
+      --let members = HouseholdMembers $ NESet.fromList $ fromList [user1, user2]
       Session.statement (User userId1 "test1" "test1") insertUser
       Session.statement (User userId2 "test2" "test2") insertUser
 
       householdId <- HouseholdId <$> liftIO nextRandom
-      Session.statement (Household householdId "home" members) insertHousehold
+      Session.statement (householdId, "home") insertHousehold
 
       Session.statement (householdId, userId1) insertHouseholdMember
       Session.statement (householdId, userId2) insertHouseholdMember
@@ -215,8 +215,8 @@ unitTests runS pool = testGroup "Query Tests"
       userId <- UserId <$> liftIO nextRandom
       Session.statement (User userId "test" "test") insertUser
       householdId <- HouseholdId <$> liftIO nextRandom
-      let members = HouseholdMembers $ NESet.fromList $ fromList [User userId "test" "test"]
-      Session.statement (Household householdId "home" members) insertHousehold
+      --let members = HouseholdMembers $ NESet.fromList $ fromList [User userId "test" "test"]
+      Session.statement (householdId, "home") insertHousehold
       --Session.statement (householdId, userId') insertHouseholdMember
       choreId1 <- ChoreId <$> liftIO nextRandom
       choreId2 <- ChoreId <$> liftIO nextRandom
@@ -228,8 +228,8 @@ unitTests runS pool = testGroup "Query Tests"
       userId <- UserId <$> liftIO nextRandom
       Session.statement (User userId "test" "test") insertUser
       householdId <- HouseholdId <$> liftIO nextRandom
-      let members = HouseholdMembers $ NESet.fromList $ fromList [User userId "test" "test"]
-      Session.statement (Household householdId "home" members) insertHousehold
+      --let members = HouseholdMembers $ NESet.fromList $ fromList [User userId "test" "test"]
+      Session.statement (householdId, "home") insertHousehold
       --Session.statement (householdId, userId') insertHouseholdMember
       choreId1 <- ChoreId <$> liftIO nextRandom
       choreId2 <- ChoreId <$> liftIO nextRandom
@@ -251,8 +251,8 @@ unitTests runS pool = testGroup "Query Tests"
       userId <- UserId <$> liftIO nextRandom
       Session.statement (User userId "test" "test") insertUser
       householdId <- HouseholdId <$> liftIO nextRandom
-      let members = HouseholdMembers $ NESet.fromList $ fromList [user1, user2, user3]
-      Session.statement (Household householdId "home" members) insertHousehold
+      --let members = HouseholdMembers $ NESet.fromList $ fromList [user1, user2, user3]
+      Session.statement (householdId, "home") insertHousehold
       Session.statement (householdId, userId) insertHouseholdMember
       choreId1 <- ChoreId <$> liftIO nextRandom
       choreId2 <- ChoreId <$> liftIO nextRandom
@@ -299,10 +299,10 @@ unitTests runS pool = testGroup "Query Tests"
       userId1 <- UserId <$> liftIO nextRandom
       userId2 <- UserId <$> liftIO nextRandom
       userId3 <- UserId <$> liftIO nextRandom
-      let user1 = User userId1 "test1" "test1"
-      let user2 = User userId2 "test2" "test2"
-      let user3 = User userId3 "test3" "test3"
-      let members = HouseholdMembers $ NESet.fromList $ fromList [user1, user2, user3]
+      --let user1 = User userId1 "test1" "test1"
+      --let user2 = User userId2 "test2" "test2"
+      --let user3 = User userId3 "test3" "test3"
+      --let members = HouseholdMembers $ NESet.fromList $ fromList [user1, user2, user3]
       Session.statement (User userId1 "test1" "test1") insertUser
       Session.statement (User userId2 "test2" "test2") insertUser
       Session.statement (User userId3 "test3" "test3") insertUser
@@ -310,7 +310,7 @@ unitTests runS pool = testGroup "Query Tests"
       userId <- UserId <$> liftIO nextRandom
       Session.statement (User userId "test" "test") insertUser
       householdId <- HouseholdId <$> liftIO nextRandom
-      Session.statement (Household householdId "home" members) insertHousehold
+      Session.statement (householdId, "home") insertHousehold
       Session.statement (householdId, userId) insertHouseholdMember
       choreId1 <- ChoreId <$> liftIO nextRandom
       choreId2 <- ChoreId <$> liftIO nextRandom
@@ -424,10 +424,10 @@ unitTests runS pool = testGroup "Query Tests"
       today <- utctDay <$> liftIO getCurrentTime
       choreId <- ChoreId <$> liftIO nextRandom
       userId <- UserId <$> liftIO nextRandom
-      let members = HouseholdMembers $ NESet.fromList $ fromList [User userId "test" "test"]
+      --let members = HouseholdMembers $ NESet.fromList $ fromList [User userId "test" "test"]
       Session.statement (User userId "test" "test") insertUser
       householdId <- HouseholdId <$> liftIO nextRandom
-      Session.statement (Household householdId "home" members) insertHousehold
+      Session.statement (householdId, "home") insertHousehold
       Session.statement (householdId, choreId, "sweep") insertChore
       let resolutions = V.fromList $ map ((choreId,) . flip Resolution (Completed userId) . flip addDays today) [0..5]
       Session.statement resolutions insertChoreEvents
@@ -438,10 +438,10 @@ unitTests runS pool = testGroup "Query Tests"
       let until = addDays 10 today
       choreId <- ChoreId <$> liftIO nextRandom
       userId <- UserId <$> liftIO nextRandom
-      let members = HouseholdMembers $ NESet.fromList $ fromList [User userId "test" "test"]
+      --let members = HouseholdMembers $ NESet.fromList $ fromList [User userId "test" "test"]
       Session.statement (User userId "test" "test") insertUser
       householdId <- HouseholdId <$> liftIO nextRandom
-      Session.statement (Household householdId "home" members) insertHousehold
+      Session.statement (householdId, "home") insertHousehold
       Session.statement (householdId, choreId, "sweep") insertChore
       let resolutions = V.fromList $ map ((choreId,) . flip Resolution (Completed userId) . flip addDays today) [0..5]
       Session.statement resolutions insertChoreEvents
@@ -456,8 +456,8 @@ unitTests runS pool = testGroup "Query Tests"
       let user = User userId "test" "test"
       Session.statement (user) insertUser
       householdId <- HouseholdId <$> liftIO nextRandom
-      let members = HouseholdMembers $ NESet.fromList $ fromList [user]
-      Session.statement (Household householdId "home" members) insertHousehold
+      --let members = HouseholdMembers $ NESet.fromList $ fromList [user]
+      Session.statement (householdId, "home") insertHousehold
       Session.statement (householdId, choreId1, "sweep") insertChore
       Session.statement (householdId, choreId2, "vacuum") insertChore
       let chore1Resolutions = map ((choreId1,) . flip Resolution (Completed userId) . flip addDays today) [0..5]
@@ -468,12 +468,12 @@ unitTests runS pool = testGroup "Query Tests"
       print output
       liftIO $ length (M.foldr (++) [] output) @?= 8
   , testCase "choreParticipantsRoundTrip Everyone" $ runS $ do
-      userId <- UserId <$> liftIO nextRandom
-      let user = User userId "test" "test"
-      let members = HouseholdMembers $ NESet.fromList $ fromList [user]
+      --userId <- UserId <$> liftIO nextRandom
+      --let user = User userId "test" "test"
+      --let members = HouseholdMembers $ NESet.fromList $ fromList [user]
       householdId <- HouseholdId <$> liftIO nextRandom
       choreId <- ChoreId <$> liftIO nextRandom
-      Session.statement (Household householdId "home" members) insertHousehold
+      Session.statement (householdId, "home") insertHousehold
       Session.statement (householdId, choreId, "sweep") insertChore
 
       let participants = Everyone
@@ -488,14 +488,14 @@ unitTests runS pool = testGroup "Query Tests"
       let user1 = User userId1 "test1" "test1"
       let user2 = User userId2 "test2" "test2"
       let user3 = User userId3 "test3" "test3"
-      let members = HouseholdMembers $ NESet.fromList $ fromList [user1, user2, user3]
+      --let members = HouseholdMembers $ NESet.fromList $ fromList [user1, user2, user3]
       Session.statement (user1) insertUser
       Session.statement (user2) insertUser
       Session.statement (user3) insertUser
 
       householdId <- HouseholdId <$> liftIO nextRandom
       choreId <- ChoreId <$> liftIO nextRandom
-      Session.statement (Household householdId "home" members) insertHousehold
+      Session.statement (householdId, "home") insertHousehold
       Session.statement (householdId, choreId, "sweep") insertChore
 
       let participants = Some $ NESet.fromList $ fromList [userId1, userId2]
@@ -525,12 +525,12 @@ unitTests runS pool = testGroup "Query Tests"
       let householdMembers = HouseholdMembers $ NESet.fromList $ fromList [user2, user3, user4, user5]
       let someParticipants = Some $ NESet.fromList $ fromList [userId2, userId3, userId4]
 
-      let resultSome = rotation resolutions householdMembers someParticipants
-      let resultEveryone = rotation resolutions householdMembers Everyone
-      let resultNone = rotation resolutions householdMembers None
+      let resultSome = genRotation resolutions householdMembers someParticipants
+      let resultEveryone = genRotation resolutions householdMembers Everyone
+      let resultNone = genRotation resolutions householdMembers None
 
-      resultSome @?= [user4, user3, user2]
-      drop 2 resultEveryone @?= [user3, user2]
+      (take 3 resultSome) @?= [user4, user3, user2]
+      (take 2 $ drop 2 $ resultEveryone) @?= [user3, user2]
       resultNone @?= []
   ]
 
