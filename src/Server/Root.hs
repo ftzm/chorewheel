@@ -12,6 +12,8 @@ import qualified Data.Map as M
 import qualified Data.Map.Merge.Strict as MM
 import Data.List
 
+import Debug.Trace
+
 import Models
 --import App
 import Routes.Root
@@ -61,6 +63,7 @@ choreWheelApi = ChoreWheelApi
   , _addMonthRow = addMonthRowHandler
   , _removeMonthRow = removeMonthRowHandler
   , _createChore = createChoreHandler
+  , _doChore = handleDoChore
   , _landing = landingHandler
   , _household = handleHousehold
   , _static = serveDirectoryWebApp "static"
@@ -211,18 +214,64 @@ handleHousehold userId householdName = do
   let pastDays = [from..(addDays (-1) today)]
   let futureDays = [(addDays 1 today)..until]
   let dayTuple = (pastDays, today, futureDays)
-  --resolutions <- choreEvents userId household.id' from until
+  resolutions <- choreEvents userId household.id' from until
   rotationResolutions <-
-    choreEvents userId household.id' (addDays (-365) today) today
+    choreEvents userId household.id' (addDays (-365) today) until
   let input = flip map cs $ \c ->
         let stateDays =
               mapMaybe ssDay $ scheduleStateWindow from until $ c.schedule
             crs = fromMaybe [] $ M.lookup c.id' rotationResolutions
             rotation =
               map ScheduledCell $ genRotation crs household.members c.participants
+            choreResolutions = M.findWithDefault [] c.id' resolutions
+            getCell d =
+              (ResolutionCell <$> find ((d==) . (.day)) choreResolutions)
+              <|> (lookup d (zip stateDays rotation))
+        in Debug.Trace.trace ("\n" ++ show (zip stateDays rotation) ++ "\n--------------\n") (rotation, ( c
+           , map getCell pastDays
+           , getCell today
+           , map getCell futureDays
+           ))
+  return $ householdPage household.id' dayTuple $ map snd input
+
+handleDoChore
+  :: MonadError ServerError m
+  => HouseholdM m
+  => ChoreM m
+  => TimeM m
+  => LogM m
+  => UserId
+  -> HouseholdId
+  -> ChoreId
+  -> Day
+  -> m (Html ())
+handleDoChore userId householdId choreId day = do
+  oldChore <- getFullChore choreId
+  household <- justOrErr err401 =<< getHousehold userId householdId
+  resolveChore userId householdId oldChore $ Resolution day $ Completed userId
+  c <- getFullChore choreId
+  today <- utctDay <$> now
+  let from = addDays (-10) today
+  let until = addDays 15 from
+  let pastDays = [from..(addDays (-1) today)]
+  let futureDays = [(addDays 1 today)..until]
+  let dayTuple = (pastDays, today, futureDays)
+  resolutions <- choreEvents userId householdId from until
+  rotationResolutions <-
+    choreEvents userId householdId (addDays (-365) today) today
+  let input =
+        let stateDays =
+              mapMaybe ssDay $ scheduleStateWindow from until $ c.schedule
+            crs = fromMaybe [] $ M.lookup c.id' rotationResolutions
+            rotation =
+              map ScheduledCell $ genRotation crs household.members c.participants
+            choreResolutions = M.findWithDefault [] c.id' resolutions
+            getCell d =
+              (ResolutionCell <$> find ((d==) . (.day)) choreResolutions)
+              <|> (lookup d (zip stateDays rotation))
         in ( c
-           , map (flip lookup (zip stateDays rotation)) pastDays
-           , lookup today (zip stateDays rotation)
-           , map (flip lookup (zip stateDays rotation)) futureDays
+           , map getCell pastDays
+           , getCell today
+           , map getCell futureDays
            )
-  return $ householdPage dayTuple input
+  return $ gridRow householdId dayTuple input

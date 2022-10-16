@@ -39,15 +39,15 @@ householdChores =
   where c.household_id = $1 :: uuid
   order by name|]
 
--- TODO: actually load participants
-getFullChoresByHousehold :: Statement HouseholdId (V.Vector Chore)
-getFullChoresByHousehold = Statement sql encoder (D.rowVector rowDecoder) True
+--------------------------------------------------------------------------------
+-- full chore
+
+fullChoreRowDecoder :: D.Row Chore
+fullChoreRowDecoder =
+  rawResult <&> \(choreId, choreName, p, flex, strict, weekly, monthly) ->
+  let s = fromMaybe UnscheduledSS $ flex <|> strict <|> weekly <|> monthly
+  in Chore (ChoreId choreId) choreName s Nothing p
   where
-    encoder = unHouseholdId >$< E.param (E.nonNullable E.uuid)
-    rowDecoder =
-      rawResult <&> \(choreId, choreName, p, flex, strict, weekly, monthly) ->
-      let s = fromMaybe UnscheduledSS $ flex <|> strict <|> weekly <|> monthly
-      in Chore (ChoreId choreId) choreName s Nothing p
     (<$$>) = fmap . fmap
     rawResult = (,,,,,,)
       <$> col D.uuid
@@ -87,55 +87,76 @@ getFullChoresByHousehold = Statement sql encoder (D.rowVector rowDecoder) True
           elems = loadNESetUnsafe $ zip (map fromIntegral ei) elemDays
       in MonthlyPatternSS $ PatternState (Pattern elems $ fromIntegral i)
          $ PatternPosition scheduled $ fromIntegral index
-    sql = [r|
-      select
-        c.id,
-        c.name,
-        (p.type, p.participants),
-        (fd.days, fd.scheduled),
-        (sd.days, sd.scheduled),
-        (wp.iterations, wp.elem_iterations, wp.elem_points, wp.elem_index, wp.scheduled),
-        (mp.iterations, mp.elem_iterations, mp.elem_points, mp.elem_index, mp.scheduled)
-      from chore c
-      join schedule s on s.id = c.id
-      left join flex_days fd on fd.id = s.id
-      left join strict_days sd on sd.id = s.id
-      left join (
-        select
-          wp.id,
-          wp.iterations,
-          wp.elem_index,
-          wp.scheduled,
-          array_agg(iteration) elem_iterations,
-          array_agg(point) elem_points
-        from weekly_pattern wp
-        join weekly_pattern_elem wpe on wp.id = wp.id
-        group by wp.id, wpe.weekly_pattern_id
-      ) wp on wp.id = s.id
-      left join (
-        select
-          mp.id,
-          mp.iterations,
-          mp.elem_index,
-          mp.scheduled,
-          array_agg(iteration) elem_iterations,
-          array_agg(point) elem_points
-        from monthly_pattern mp
-        join monthly_pattern_elem mpe on mp.id = mp.id
-        group by mp.id, mpe.monthly_pattern_id
-      ) mp on mp.id = s.id
-      join (
-        select
-          cpt.chore_id,
-          cpt.type,
-          array_remove(array_agg(cp.user_id), null) participants
-        from chore_participant_type cpt
-        left join chore_participant cp on cp.chore_id = cpt.chore_id
-        group by cpt.chore_id, cpt.type
-      ) p on p.chore_id = c.id
+
+selectFullChore :: ByteString
+selectFullChore =
+  [r|select
+       c.id,
+       c.name,
+       (p.type, p.participants),
+       (fd.days, fd.scheduled),
+       (sd.days, sd.scheduled),
+       (wp.iterations, wp.elem_iterations, wp.elem_points, wp.elem_index, wp.scheduled),
+       (mp.iterations, mp.elem_iterations, mp.elem_points, mp.elem_index, mp.scheduled)
+     from chore c
+     join schedule s on s.id = c.id
+     left join flex_days fd on fd.id = s.id
+     left join strict_days sd on sd.id = s.id
+     left join (
+       select
+         wp.id,
+         wp.iterations,
+         wp.elem_index,
+         wp.scheduled,
+         array_agg(iteration) elem_iterations,
+         array_agg(point) elem_points
+       from weekly_pattern wp
+       join weekly_pattern_elem wpe on wp.id = wp.id
+       group by wp.id, wpe.weekly_pattern_id
+     ) wp on wp.id = s.id
+     left join (
+       select
+         mp.id,
+         mp.iterations,
+         mp.elem_index,
+         mp.scheduled,
+         array_agg(iteration) elem_iterations,
+         array_agg(point) elem_points
+       from monthly_pattern mp
+       join monthly_pattern_elem mpe on mp.id = mp.id
+       group by mp.id, mpe.monthly_pattern_id
+     ) mp on mp.id = s.id
+     join (
+       select
+         cpt.chore_id,
+         cpt.type,
+         array_remove(array_agg(cp.user_id), null) participants
+       from chore_participant_type cpt
+       left join chore_participant cp on cp.chore_id = cpt.chore_id
+       group by cpt.chore_id, cpt.type
+     ) p on p.chore_id = c.id
+     |]
+
+getFullChoresByHousehold :: Statement HouseholdId (V.Vector Chore)
+getFullChoresByHousehold =
+  Statement sql encoder (D.rowVector fullChoreRowDecoder) True
+  where
+    encoder = unHouseholdId >$< E.param (E.nonNullable E.uuid)
+    sql = selectFullChore <> [r|
       where c.household_id = $1 :: uuid
       order by c.name
-      |]
+    |]
+
+getFullChoreById :: Statement ChoreId Chore
+getFullChoreById =
+  Statement sql encoder (D.singleRow fullChoreRowDecoder) True
+  where
+    encoder = unChoreId >$< E.param (E.nonNullable E.uuid)
+    sql = selectFullChore <> [r|
+      where c.id = $1 :: uuid
+    |]
+
+--------------------------------------------------------------------------------
 
 insertChoreEvents
   :: Statement (V.Vector (ChoreId, Resolution)) ()
@@ -189,6 +210,7 @@ getChoreEventsFromTo =
     and day < $2 :: date
   )
   and day <= $3 :: date
+  order by day asc
   |]
 
 getHouseholdChoreEventsFromTo :: Statement (HouseholdId, Day, Day) (M.Map ChoreId [Resolution])
@@ -204,7 +226,7 @@ getHouseholdChoreEventsFromTo =
     and e.day >= $2 :: date
     and e.day <= $3 :: date
   where c.household_id = $1 :: uuid
-  order by e.day
+  order by e.day asc
   |]
   where
     decoder

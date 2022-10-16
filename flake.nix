@@ -19,6 +19,7 @@
               (pkgs.haskell-language-server.override {
                 supportedGhcVersions = [ ghcVersion ];
               })
+              haskellPackages.fourmolu
               zlib
               postgresql
               docker-compose

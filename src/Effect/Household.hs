@@ -12,6 +12,7 @@ import Models
 
 class Monad m => HouseholdM m where
   getHouseholds :: UserId -> m [Household]
+  getHousehold :: UserId -> HouseholdId -> m (Maybe Household)
   createHousehold :: UserId -> Text -> m ()
   leaveHousehold :: UserId -> HouseholdId -> m ()
   householdIdFromName :: UserId -> Text -> m (Maybe HouseholdId)
@@ -22,6 +23,7 @@ newtype HouseholdT m a = HouseholdT (m a)
 
 instance (WithDb r m) => HouseholdM (HouseholdT m) where
   getHouseholds i = runPool $ HS.statement i (V.toList <$> getUserHouseholds)
+  getHousehold i hId = runPool $ HS.statement (i, hId) getHouseholdById
   createHousehold u h = runPool $ do
     householdId <- HouseholdId <$> liftIO nextRandom
     HS.statement (householdId, h) insertHousehold

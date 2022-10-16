@@ -120,16 +120,18 @@ resolveFlexDays f@(FlexDaysState s@(FlexDays days) dayScheduled) dayResolved
     ( takeWhile (dayResolved>) $ map getDayFlex $ f : futureStatesFlex f
     , Just $ FlexDaysState s $ addDays (fromIntegral days) dayResolved
     )
-  where
-    getDayFlex (FlexDaysState _ d) = d
+
+getDayStrict :: StrictDaysState -> Day
+getDayStrict (StrictDaysState _ d) = d
+
+getDayFlex :: FlexDaysState -> Day
+getDayFlex (FlexDaysState _ d) = d
 
 resolveStrictDays :: StrictDaysState -> Day -> ([Day], Maybe StrictDaysState)
 resolveStrictDays s'@(StrictDaysState _ dayScheduled) dayResolved
   | dayScheduled > dayResolved = ([], Nothing)
-  | otherwise = bimap (map getDayStrict) (viaNonEmpty head)
+  | otherwise = bimap (map getDayStrict) (viaNonEmpty head . dropWhile ((dayResolved>=) . getDayStrict))
                 $ span ((dayResolved>) . getDayStrict) $ s' : futureStatesStrict s'
-  where
-    getDayStrict (StrictDaysState _ d) = d
 
 resolveSchedule
   :: ScheduleState

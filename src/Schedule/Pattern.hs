@@ -192,7 +192,7 @@ resolvePatternWeekly
   -> ([Day], Maybe WeeklyPatternState)
 resolvePatternWeekly p@(PatternState _ pos) day
   | pos.day > day = ([], Nothing)
-  | otherwise = bimap (map getDay) (viaNonEmpty head)
+  | otherwise = bimap (map getDay) (viaNonEmpty head . dropWhile ((day>=) . getDay))
                 $ span ((day>) . getDay) $ p : futureStatesWeekly p
 
 resolvePatternMonthly
@@ -201,5 +201,5 @@ resolvePatternMonthly
   -> ([Day], Maybe MonthlyPatternState)
 resolvePatternMonthly p@(PatternState _ pos) day
   | pos.day > day = ([], Nothing)
-  | otherwise = bimap (map getDay) (viaNonEmpty head)
+  | otherwise = bimap (map getDay) (viaNonEmpty head . dropWhile ((day>=) . getDay))
                 $ span ((day>) . getDay) $ p : futureStatesMonthly p

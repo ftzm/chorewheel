@@ -12,6 +12,8 @@ import Data.Generics.Labels() --instance declarations
 import qualified Data.Set.NonEmpty as NESet
 import qualified Data.Set as Set
 import Data.List ((\\))
+import Servant.API
+import Debug.Trace
 
 import Schedule
 import Participants
@@ -23,6 +25,7 @@ import Models
 newtype Period = UTCTime UTCTime
 
 newtype ChoreId = ChoreId { unChoreId :: UUID} deriving (Eq, Ord, Show)
+  deriving newtype (ToHttpApiData, FromHttpApiData)
 
 data Chore = Chore
   { id' :: ChoreId
@@ -72,12 +75,13 @@ enrichById s = catMaybes . map (\i -> find ((i==) . (.id')) s)
 
 genRotation :: [Resolution] -> HouseholdMembers -> Participants -> [User]
 genRotation resolutions (HouseholdMembers hm) participants =
-  cycle $ enrichById hm order
+  cycle $ enrichById hm $ Debug.Trace.trace (show order) order
   where
+    sortedResolutions = sortBy (\x y -> compare x.day y.day) resolutions
     participantSet = case participants of
       Some ps -> NESet.toSet ps
       Everyone -> Set.map (.id') $ NESet.toSet hm
       None -> mempty
-    completions = ordNub [ u | Completed u <- map resolutionType resolutions
+    completions = ordNub [ u | Completed u <- map resolutionType sortedResolutions
                              , Set.member u participantSet]
-    order = (toList participantSet \\ completions) ++ completions
+    order = Debug.Trace.trace (show completions) (toList participantSet \\ completions) ++ completions

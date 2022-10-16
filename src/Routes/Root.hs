@@ -7,12 +7,15 @@ import Servant.API.Generic
 import Servant.Links
 import Lucid
 import Data.UUID
+import Data.Time.Calendar (Day)
+
 
 
 import           Web.FormUrlEncoded          (FromForm)
 import ServantLucid
 import Routes.SessionAuth
 import Models
+import Chore
 
 newtype CreateHouseholdPayload = CreateHouseholdPayload
   { newHouseholdName :: Text
@@ -89,6 +92,14 @@ data ChoreWheelApi mode = ChoreWheelApi
       :> "create_chore"
       :> Capture "householdId" HouseholdId
       :> ReqBody '[FormUrlEncoded] CreateChorePayload
+      :> Post '[HTML] (Html ())
+  , _doChore :: mode
+      :- AuthProtect "session-auth"
+      :> "do_chore"
+      :> Capture "householdId" HouseholdId
+      :> Capture "choreId" ChoreId
+      -- :> Capture "date" Day
+      :> QueryParam' '[Required, Strict] "date" Day
       :> Post '[HTML] (Html ())
   , _landing :: mode
       :- Get '[HTML] (Html ())

@@ -1,6 +1,5 @@
 {-# LANGUAGE UndecidableInstances #-}
 
-
 module Effect.Chore where
 
 import qualified Hasql.Session as HS
@@ -20,6 +19,9 @@ import DB.Household
 getFullChoresImpl :: (WithDb r m) => HouseholdId -> m [Chore]
 getFullChoresImpl h = runPool $ HS.statement h $ V.toList <$> getFullChoresByHousehold
 
+getFullChoreImpl :: (WithDb r m) => ChoreId -> m Chore
+getFullChoreImpl h = runPool $ HS.statement h $ getFullChoreById
+
 saveChoreImpl :: (WithDb r m) => UserId -> HouseholdId -> Chore -> m ()
 saveChoreImpl userId householdId chore = runPool $ do
   isHouseholdMember' <- HS.statement (userId, householdId) isHouseholdMember
@@ -27,6 +29,7 @@ saveChoreImpl userId householdId chore = runPool $ do
   then do
     HS.statement (householdId, chore.id', chore.name) insertChore
     insertSchedule (chore.id', chore.schedule)
+    insertParticipants (chore.id', chore.participants)
   else
     error "User is not a household member"
 
@@ -50,6 +53,7 @@ choreEventsImpl _ hId from to = do
 
 class Monad m => ChoreM m where
   getFullChores :: HouseholdId -> m [Chore]
+  getFullChore :: ChoreId -> m Chore
   saveChore :: UserId -> HouseholdId -> Chore -> m ()
   resolveChore :: UserId -> HouseholdId -> Chore -> Resolution -> m ()
   choreEvents :: UserId -> HouseholdId -> Day -> Day -> m (M.Map ChoreId [Resolution])
@@ -59,6 +63,7 @@ newtype ChoreT m a = ChoreT (m a)
 
 instance (WithDb r m) => ChoreM (ChoreT m) where
   getFullChores = getFullChoresImpl
+  getFullChore = getFullChoreImpl
   saveChore = saveChoreImpl
   resolveChore = resolveChoreImpl
   choreEvents = choreEventsImpl

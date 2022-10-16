@@ -9,11 +9,14 @@ import Lucid
 
 import Data.Time.Calendar (Day)
 
+
 import Models
 import Page.Attribute
 import Page.Common
 import Chore
 import Schedule
+import Routes.Root
+import Web.HttpApiData
 
 householdsFragment :: [Household] -> Html ()
 householdsFragment households =
@@ -41,36 +44,62 @@ householdsPage households =
 --------------------------------------------------------------------------------
 
 data CellType = ResolutionCell Resolution | ScheduledCell User
+  deriving Show
+
+gridButton :: HouseholdId -> ChoreId -> Day -> Bool -> Html ()
+gridButton householdId choreId day completed =
+  button_
+    [ class_ $ mconcat  [ "ml-2" ]
+    , hxPost_ $ mappend "/" $ toUrlPiece $ (_doChore rootLinks) householdId choreId day
+    , hxTarget_ $ "#chore-" <> (show $ unChoreId choreId)
+    , hxSwap_ "outerHTML"
+    ]
+    symbol
+  where
+    symbol = case completed of
+      True -> "(x)"
+      False -> "( )"
+
+gridCell :: Text -> HouseholdId -> ChoreId -> (Day, Maybe CellType) -> Html ()
+gridCell bg householdId choreId (day, c) = case c of
+  Nothing ->
+    td_ [class_ $ "p-2 border border-slate-300 text-center " <> bg]
+    . toHtml @Text $ ""
+  Just c' -> case c' of
+    ResolutionCell _ ->
+      td_ [class_ $ "p-2 border border-slate-300 text-center " <> bg]
+      . toHtml @Text $ "resolved"
+    ScheduledCell u ->
+      td_ [class_ $ "p-2 border border-slate-300 text-center " <> bg] $ do
+        toHtml @Text $ (.name) u
+        gridButton householdId choreId day False
+
+gridRow
+  :: HouseholdId
+  -> ([Day], Day, [Day])
+  -> (Chore, [Maybe CellType], Maybe CellType, [Maybe CellType])
+  -> Html ()
+gridRow householdId (pastDays, today, futureDays) (c, pds, t, fds) =
+  tr_ [id_ $ "chore-" <> (show $ unChoreId c.id')] $ do
+    (th_ [class_ "p-2 bg-slate-100 border border-slate-300"] . toHtml . (.name)) c
+    mconcat $ map (gridCell "" householdId c.id') $ zip  pastDays pds
+    gridCell "bg-blue-100" householdId c.id' (today, t)
+    mconcat $ map (gridCell "" householdId c.id') $ zip futureDays fds
 
 householdPage
-  :: ([Day], Day, [Day])
-  -> ([(Chore, [Maybe CellType], Maybe CellType, [Maybe CellType])])
+  :: HouseholdId
+  -> ([Day], Day, [Day])
+  -> [(Chore, [Maybe CellType], Maybe CellType, [Maybe CellType])]
   -> Html ()
-householdPage (pastDays, today, futureDays) choreRows =
+householdPage householdId days@(pastDays, today, futureDays) choreRows =
   container "Household" $
-  --table_ [class_ "table-auto border-collapse border border-slate-400 "] $ thead_ $ do
-  table_ [class_ "table-auto"] $ thead_ $ do
-    tr_ $ do
-      th_  ""
-      mconcat $ map (th_ [class_ "p-2 bg-slate-200 border border-slate-300"] . toHtml . show @Text) pastDays
-      th_ [class_ "p-2 bg-blue-300 border border-slate-300"] . toHtml $ show @Text today
-      mconcat $ map (th_ [class_ "p-2 bg-slate-200 border border-slate-300"] . toHtml . show @Text) futureDays
-      mconcat $ flip map choreRows $ \(c, pds, t, fds) -> do
-        tr_ $ do
-          (th_ [class_ "p-2 bg-slate-100 border border-slate-300"] . toHtml . (.name)) c
-          mconcat $ map (renderCell "") pds
-          renderCell "bg-blue-100" t
-          mconcat $ map (renderCell "") fds
-  where
-    renderCell :: Text -> Maybe CellType -> Html ()
-    renderCell bg c = case c of
-      Nothing ->
-        td_ [class_ $ "p-2 border border-slate-300 text-center " <> bg]
-        . toHtml @Text $ ""
-      Just c' -> case c' of
-        ResolutionCell _ ->
-          td_ [class_ $ "p-2 border border-slate-300 text-center " <> bg]
-          . toHtml @Text $ "resolved"
-        ScheduledCell u ->
-          td_ [class_ $ "p-2 border border-slate-300 text-center " <> bg]
-          . toHtml @Text $ ((.name) u <> " ( )")
+  table_ [class_ "table-auto"] $ do
+    thead_ $ do
+      tr_ $ do
+        th_  ""
+        mconcat $ map (th_ [class_ "p-2 bg-slate-200 border border-slate-300"] . toHtml . show @Text) pastDays
+        th_ [class_ "p-2 bg-blue-300 border border-slate-300"] . toHtml $ show @Text today
+        mconcat $ map (th_ [class_ "p-2 bg-slate-200 border border-slate-300"] . toHtml . show @Text) futureDays
+    tbody_ $ do
+      mconcat $ flip map choreRows $ \choreRow -> do
+        gridRow householdId days choreRow

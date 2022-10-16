@@ -92,7 +92,6 @@ data Household  = Household
   , members :: HouseholdMembers
   } deriving (Show, Eq, Generic)
 
-
 data Clash = Clash { name :: Text }
 
 -- h :: Household
