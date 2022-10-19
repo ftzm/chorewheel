@@ -110,7 +110,7 @@ logInfoIO :: LogEnv -> Namespace -> Text -> IO ()
 logInfoIO logEnv namespace msg =
   runKatipContextT logEnv () namespace $ logFM InfoS $ logStr msg
 
-logRequests :: LogEnv -> Namespace -> (Application -> Application)
+logRequests :: LogEnv -> Namespace -> Application -> Application
 logRequests logEnv namespace baseApp =
   \req responseFunc ->
     baseApp req $ \res -> logReq req res >> responseFunc res

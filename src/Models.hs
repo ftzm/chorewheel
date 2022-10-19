@@ -92,7 +92,23 @@ data Household  = Household
   , members :: HouseholdMembers
   } deriving (Show, Eq, Generic)
 
-data Clash = Clash { name :: Text }
+-- data Clash = Clash { name :: Text }
+--
+--
+-- data A = A { val :: Text }
+--   deriving (Generic)
+--
+-- data B = B { val :: A }
+--   deriving (Generic)
+--
+-- b = B $ A "test"
+--
+-- infix 4 %~
+-- (%~) = over
+--
+-- t = b ^. #val . #val
+-- u = b & #val . #val .~ "other"
+-- v = b & #val . #val %~ (<> " word")
 
 -- h :: Household
 -- h = Household (HouseholdId nil) "house"
