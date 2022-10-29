@@ -6,7 +6,7 @@
   outputs = { self, nixpkgs, flake-utils, haskellNix }:
     flake-utils.lib.eachSystem [ "x86_64-linux" "x86_64-darwin" ] (system:
       let
-        ghcVersion = "921";
+        ghcVersion = "924";
         devDrv = pkgs.mkShell {
           buildInputs = with pkgs;
             [
@@ -67,7 +67,9 @@
                 nixpkgs-fmt
                 cabal-install
                 hlint
-                haskell-language-server
+                (pkgs.haskell-language-server.override {
+                  supportedGhcVersions = [ ghcVersion ];
+                })
               ];
 
             };
@@ -83,6 +85,6 @@
         defaultPackage = flake.packages."chorewheel:exe:chorewheel";
         # We use a separate derivation for the shell so that you don't need to
         # build all of our packages just to use cached binaries.
-        devShell = devDrv;
+        # devShell = devDrv;
       });
 }

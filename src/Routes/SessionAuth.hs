@@ -3,7 +3,6 @@
 module Routes.SessionAuth where
 
 import Servant.API
-import Servant.API.Generic
 import           Web.FormUrlEncoded          (FromForm)
 import Web.Cookie
 

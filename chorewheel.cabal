@@ -75,8 +75,8 @@ common common-options
     , warp
     , word8
     -- test stuff because otherwise hls doesn't work :(
-    , tasty
-    , tasty-hunit
+    --=, tasty
+    --, tasty-hunit
   mixins:
       base hiding (Prelude)
     , relude (Relude as Prelude)

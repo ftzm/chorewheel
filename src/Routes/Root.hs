@@ -3,7 +3,6 @@
 module Routes.Root where
 
 import Servant.API
-import Servant.API.Generic
 import Servant.Links
 import Lucid
 import Data.UUID
@@ -98,7 +97,6 @@ data ChoreWheelApi mode = ChoreWheelApi
       :> "do_chore"
       :> Capture "householdId" HouseholdId
       :> Capture "choreId" ChoreId
-      -- :> Capture "date" Day
       :> QueryParam' '[Required, Strict] "date" Day
       :> Post '[HTML] (Html ())
   , _landing :: mode
