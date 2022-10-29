@@ -1,14 +1,8 @@
 module Page.Households where
 
 import Lucid
--- import Lucid.Base
---
--- import Servant.Links
--- import Routes.Root
--- import Routes.SessionAuth
 
 import Data.Time.Calendar (Day)
-
 
 import Models
 import Page.Attribute
@@ -50,18 +44,17 @@ gridButton :: HouseholdId -> ChoreId -> Day -> Bool -> Html ()
 gridButton householdId choreId day completed =
   button_
     [ class_ $ mconcat  [ "ml-2" ]
-    , hxPost_ $ mappend "/" $ toUrlPiece $ (_doChore rootLinks) householdId choreId day
-    , hxTarget_ $ "#chore-" <> (show $ unChoreId choreId)
+    , hxPost_ $ mappend "/" $ toUrlPiece $
+      _doChore rootLinks householdId choreId day
+    , hxTarget_ $ "#chore-" <> show (unChoreId choreId)
     , hxSwap_ "outerHTML"
     ]
     symbol
   where
-    symbol = case completed of
-      True -> "(x)"
-      False -> "( )"
+    symbol = if completed then "(x)" else "( )"
 
-gridCell :: Text -> HouseholdId -> ChoreId -> (Day, Maybe CellType) -> Html ()
-gridCell bg householdId choreId (day, c) = case c of
+gridCell :: Text -> HouseholdId -> ChoreId -> Day -> Maybe CellType -> Html ()
+gridCell bg householdId choreId day c = case c of
   Nothing ->
     td_ [class_ $ "p-2 border border-slate-300 text-center " <> bg]
     . toHtml @Text $ ""
@@ -80,11 +73,11 @@ gridRow
   -> (Chore, [Maybe CellType], Maybe CellType, [Maybe CellType])
   -> Html ()
 gridRow householdId (pastDays, today, futureDays) (c, pds, t, fds) =
-  tr_ [id_ $ "chore-" <> (show $ unChoreId c.id')] $ do
-    (th_ [class_ "p-2 bg-slate-100 border border-slate-300"] . toHtml . (.name)) c
-    mconcat $ map (gridCell "" householdId c.id') $ zip  pastDays pds
-    gridCell "bg-blue-100" householdId c.id' (today, t)
-    mconcat $ map (gridCell "" householdId c.id') $ zip futureDays fds
+  tr_ [id_ $ "chore-" <> show (unChoreId c.id')] $ do
+    th_ [class_ "p-2 bg-slate-100 border border-slate-300"] . toHtml $ c.name
+    mconcat $ zipWith (gridCell "" householdId c.id') pastDays pds
+    gridCell "bg-blue-100" householdId c.id' today t
+    mconcat $ zipWith (gridCell "" householdId c.id') futureDays fds
 
 householdPage
   :: HouseholdId
@@ -97,9 +90,16 @@ householdPage householdId days@(pastDays, today, futureDays) choreRows =
     thead_ $ do
       tr_ $ do
         th_  ""
-        mconcat $ map (th_ [class_ "p-2 bg-slate-200 border border-slate-300"] . toHtml . show @Text) pastDays
-        th_ [class_ "p-2 bg-blue-300 border border-slate-300"] . toHtml $ show @Text today
-        mconcat $ map (th_ [class_ "p-2 bg-slate-200 border border-slate-300"] . toHtml . show @Text) futureDays
+        mconcat $ map thComp pastDays
+        th_ [class_ "p-2 bg-blue-300 border border-slate-300"] . toHtml $
+          show @Text today
+        mconcat $ map thComp futureDays
     tbody_ $ do
       mconcat $ flip map choreRows $ \choreRow -> do
         gridRow householdId days choreRow
+  where
+    thComp :: Day -> Html ()
+    thComp c =
+      th_
+        [class_ "p-2 bg-slate-200 border border-slate-300"]
+        (toHtml $ show @Text c)

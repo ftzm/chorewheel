@@ -13,10 +13,10 @@ import Effect.Household
 import Effect.Chore
 
 data AppEnv = AppEnv
-  { _pool :: HP.Pool
-  , _logEnv :: LogEnv
-  , _logContexts :: LogContexts
-  , _namespace :: Namespace
+  { pool :: HP.Pool
+  , logEnv :: LogEnv
+  , logContexts :: LogContexts
+  , logNamespace :: Namespace
   } deriving Generic
 
 newtype App a = App (ReaderT AppEnv (ExceptT ServerError IO) a)

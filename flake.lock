@@ -411,7 +411,8 @@
         "nixpkgs": [
           "haskellNix",
           "nixpkgs-unstable"
-        ]
+        ],
+        "unstable": "unstable"
       }
     },
     "stackage": {
@@ -427,6 +428,22 @@
       "original": {
         "owner": "input-output-hk",
         "repo": "stackage.nix",
+        "type": "github"
+      }
+    },
+    "unstable": {
+      "locked": {
+        "lastModified": 1666992249,
+        "narHash": "sha256-QLJVTKHS4FnvddbnrzUcyLAvUQaBRDl3uvwUMVjk9+s=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "fbb042bc87bc92fc5296b8b151e36970dd996c64",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixpkgs-unstable",
+        "repo": "nixpkgs",
         "type": "github"
       }
     }

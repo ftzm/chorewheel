@@ -2,33 +2,33 @@
   description = "Chorewheel";
   inputs.haskellNix.url = "github:input-output-hk/haskell.nix";
   inputs.nixpkgs.follows = "haskellNix/nixpkgs-unstable";
+  inputs.unstable.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
   inputs.flake-utils.url = "github:numtide/flake-utils";
-  outputs = { self, nixpkgs, flake-utils, haskellNix }:
+  outputs = { self, nixpkgs, flake-utils, haskellNix, unstable }:
     flake-utils.lib.eachSystem [ "x86_64-linux" "x86_64-darwin" ] (system:
       let
         ghcVersion = "924";
         devDrv = pkgs.mkShell {
-          buildInputs = with pkgs;
-            [
-              haskell.compiler."ghc${ghcVersion}"
-              cabal-install
-              hpack
-              hlint
-              hpack
-              ghcid
-              (pkgs.haskell-language-server.override {
-                supportedGhcVersions = [ ghcVersion ];
-              })
-              haskellPackages.fourmolu
-              zlib
-              postgresql
-              docker-compose
-              inotify-tools
-              lsof
-              expect
-              entr
-              haskellPackages.hoogle
-            ];
+          buildInputs = with pkgs; [
+            haskell.compiler."ghc${ghcVersion}"
+            cabal-install
+            hpack
+            hlint
+            hpack
+            ghcid
+            (pkgs.haskell-language-server.override {
+              supportedGhcVersions = [ ghcVersion ];
+            })
+            haskellPackages.fourmolu
+            zlib
+            postgresql
+            docker-compose
+            inotify-tools
+            lsof
+            expect
+            entr
+            haskellPackages.hoogle
+          ];
         };
         overlays = [
           haskellNix.overlay
@@ -44,24 +44,26 @@
               #
               # This is used by `nix develop .` to open a shell for use with
               # `cabal`, `hlint` and `haskell-language-server`
-              # shell.tools = let
-              #   modules = [
-              #     ({ lib, ... }: {
-              #       # https://github.com/input-output-hk/haskell.nix/issues/829
-              #       config.dontStrip = false;
-              #       # https://github.com/input-output-hk/haskell.nix/issues/1177
-              #       config.reinstallableLibGhc = true;
-              #       # options.nonReinstallablePkgs =
-              #       #   lib.mkOption { apply = x: [ "exceptions" "stm" ] ++ x; };
-              #     })
-              #   ];
-              # in {
-              #   cabal = { };
-              #   hlint = {};
-              #   haskell-language-server = {
-              #     inherit modules;
-              #   };
-              # };
+              shell.tools = # let
+                #   modules = [
+                #     ({ lib, ... }: {
+                #       # https://github.com/input-output-hk/haskell.nix/issues/829
+                #       config.dontStrip = false;
+                #       # https://github.com/input-output-hk/haskell.nix/issues/1177
+                #       config.reinstallableLibGhc = true;
+                #       # options.nonReinstallablePkgs =
+                #       #   lib.mkOption { apply = x: [ "exceptions" "stm" ] ++ x; };
+                #     })
+                #   ];
+                # in {
+                {
+                  #   cabal = { };
+                  #   hlint = {};
+                  #   haskell-language-server = {
+                  #     inherit modules;
+                  #   };
+                  #     fourmolu = {};
+                };
 
               shell.buildInputs = with pkgs; [
                 nixpkgs-fmt
@@ -70,6 +72,7 @@
                 (pkgs.haskell-language-server.override {
                   supportedGhcVersions = [ ghcVersion ];
                 })
+                haskell.packages.ghc924.fourmolu_0_8_2_0
               ];
 
             };
@@ -79,6 +82,7 @@
           inherit system overlays;
           inherit (haskellNix) config;
         };
+        unstablePkgs = import nixpkgs { inherit system; };
         flake = pkgs.chorewheel.flake { };
       in flake // {
         # Built by `nix build .`

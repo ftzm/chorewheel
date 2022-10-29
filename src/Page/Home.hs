@@ -1,11 +1,11 @@
 module Page.Home where
 
-import Lucid
 import Data.Text
+import Lucid
 
-import Servant.Links
 import Routes.Root
 import Routes.SessionAuth
+import Servant.Links
 
 import Page.Common
 
