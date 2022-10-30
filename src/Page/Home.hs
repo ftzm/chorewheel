@@ -5,12 +5,11 @@ import Lucid
 
 import Routes.Root
 import Routes.SessionAuth
-import Servant.Links
 
 import Page.Common
 
 sessionLogoutLink :: Text
-sessionLogoutLink = pack $ show $ linkURI $ _sessionLogout $ _session rootLinks
+sessionLogoutLink = pack $ show $ _sessionLogout $ _session rootLinks
 
 home :: Html ()
 home =

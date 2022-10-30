@@ -4,7 +4,6 @@ import Lucid
 --import Lucid.Base
 import Data.Text
 
-import Servant.Links
 import Routes.Root
 import Routes.SessionAuth
 
@@ -13,7 +12,7 @@ import Models (User(..))
 import Page.Common
 
 sessionLoginLink :: Text
-sessionLoginLink = pack $ show $ linkURI $ _sessionLogin $ _session rootLinks
+sessionLoginLink = pack $ show $ _sessionLogin $ _session rootLinks
 
 
 loginPage :: Html ()

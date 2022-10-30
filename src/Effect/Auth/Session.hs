@@ -1,27 +1,31 @@
-{-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Effect.Auth.Session where
 
-import Data.ByteString.Base64 (encode)
+import Control.Monad.Except
 import Crypto.Random.Types (getRandomBytes)
-import qualified Hasql.Session as HS
-import Data.Time.Clock
-import Web.Cookie                       (parseCookies)
+import Data.ByteString.Base64 (encode)
 import Data.List (lookup)
-
---servant
+import Data.Time.Clock
+import Hasql.Session qualified as HS
+import Network.Wai (Request, requestHeaders)
 import Servant
-import Servant.Server.Experimental.Auth (AuthHandler, AuthServerData,
-                                         mkAuthHandler)
-import Network.Wai                      (Request, requestHeaders)
-import qualified Data.ByteString.Lazy as LBS
+import Servant.Server.Experimental.Auth (
+  AuthHandler,
+  AuthServerData,
+  mkAuthHandler,
+ )
+import Web.Cookie (parseCookies)
 
-import Models
+import ApiUtil
 import DB
 import DB.Session
 import Effect.Auth.Password
+import Log
+import Models
+import Routes.Root
 
 -------------------------------------------------------------------------------
 -- Implementation
@@ -35,7 +39,8 @@ createSessionImpl u = do
   expiration <- addUTCTime sixtyDaysInSeconds <$> liftIO getCurrentTime
   HS.statement (u, t, expiration) upsertToken
   return t
-  where sixtyDaysInSeconds = 5184000
+ where
+  sixtyDaysInSeconds = 5184000
 
 loginImpl :: WithDb r m => Username -> Password -> m (Maybe SessionToken)
 loginImpl u p = runPool $ traverse createSessionImpl =<< validateBasicAuth u p
@@ -72,21 +77,38 @@ instance WithDb r m => SessionAuthM (SessionAuthT m) where
 
 type instance AuthServerData (AuthProtect "session-auth") = UserId
 
-getCookieOrError :: Request -> ByteString -> Either LBS.ByteString Text
+getCookieOrError :: Request -> ByteString -> Either Text Text
 getCookieOrError req name' = do
-  cookieHeader <- maybeToEither
-    "Missing cookie header"
-    (lookup "cookie" $ requestHeaders req)
-  cookie <- maybeToEither
-    (fromStrict $ "Missing cookie: " <> name')
-    (lookup name' $ parseCookies cookieHeader)
+  cookieHeader <-
+    maybeToEither
+      "Missing cookie header"
+      (lookup "cookie" $ requestHeaders req)
+  cookie <-
+    maybeToEither
+      ("Missing cookie: " <> decodeUtf8 name')
+      (lookup name' $ parseCookies cookieHeader)
   pure $ decodeUtf8 cookie
-  where
-    maybeToEither e = maybe (Left e) Right
+ where
+  maybeToEither e = maybe (Left e) Right
 
-authHandler :: SessionAuthM m => (forall a. m a -> Handler a) -> AuthHandler Request UserId
-authHandler f = mkAuthHandler $ \r ->
-  either throw401 handle (SessionToken <$> getCookieOrError r "session-token")
-  where
-    throw401 msg = throwError $ err401 {errBody = msg}
-    handle = maybe (throw401 "Session cookie invalid") pure <=< f . continue
+authHandler' ::
+  MonadError ServerError m =>
+  SessionAuthM m =>
+  LogM m =>
+  Request ->
+  m UserId
+authHandler' req =
+  getCookieOrError req "session-token" & either handleError checkToken
+ where
+  checkToken t =
+    continue (SessionToken t)
+      >>= maybe (handleError "session token invalid") return
+  handleError msg = logWarn msg >> redirect302 rootLinks._login
+
+authHandler ::
+  MonadError ServerError m =>
+  SessionAuthM m =>
+  LogM m =>
+  (forall a. m a -> Handler a) ->
+  AuthHandler Request UserId
+authHandler f = mkAuthHandler $ f . authHandler'

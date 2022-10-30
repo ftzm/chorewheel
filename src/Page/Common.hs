@@ -1,6 +1,5 @@
 module Page.Common where
 
-import Servant.Links
 import Lucid
 
 import Page.Attribute
@@ -28,9 +27,9 @@ container title body =
       style_ "body{background:white}"
     body_ [class_ "flex"]$ do
       nav_ [class_ "flex-initial h-screen p-4 bg-slate-300"] $ ul_ $ do
-        li_ $ a_ [href_ $ "/" <> show (linkURI $ _home rootLinks)] "home"
-        li_ $ a_ [href_ $ "/" <> show (linkURI $ _households rootLinks)] "households"
-        li_ $ a_ [href_ $ "/" <> show (linkURI $ _sessionLogout $ _session rootLinks)] "logout"
+        li_ $ a_ [href_ $ show $ _home rootLinks] "home"
+        li_ $ a_ [href_ $ show $ _households rootLinks] "households"
+        li_ $ a_ [href_ $ show $ _sessionLogout $ _session rootLinks] "logout"
 
       div_ [class_ "flex-1 p-4"] body
 

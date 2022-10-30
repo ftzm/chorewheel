@@ -10,7 +10,6 @@ import Page.Common
 import Chore
 import Schedule
 import Routes.Root
-import Web.HttpApiData
 
 householdsFragment :: [Household] -> Html ()
 householdsFragment households =
@@ -44,8 +43,7 @@ gridButton :: HouseholdId -> ChoreId -> Day -> Bool -> Html ()
 gridButton householdId choreId day completed =
   button_
     [ class_ $ mconcat  [ "ml-2" ]
-    , hxPost_ $ mappend "/" $ toUrlPiece $
-      _doChore rootLinks householdId choreId day
+    , hxPost_ $ show $ _doChore rootLinks householdId choreId day
     , hxTarget_ $ "#chore-" <> show (unChoreId choreId)
     , hxSwap_ "outerHTML"
     ]
