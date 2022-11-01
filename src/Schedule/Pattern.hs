@@ -12,6 +12,8 @@ module Schedule.Pattern (
   nextEligibleDayMonthly,
   futureStatesWeekly,
   futureStatesMonthly,
+  pastStatesWeekly,
+  pastStatesMonthly,
   PatternStateError (..),
   createPattern,
   createWeeklyState,
@@ -73,13 +75,22 @@ getDay :: PatternState a -> Day
 getDay (PatternState _ pos') = pos'.day
 
 nextWeekDay :: Day -> Int -> (Int, Weekday) -> (Int, Weekday) -> Day
-nextWeekDay startDay iterations startElem nextElem =
+nextWeekDay startDay iterations (startIndex, startWeekday) (nextIndex, nextWeekday) =
   addDays (fromIntegral $ weekOffset + dayOffset) startDay
  where
   weekOffset
-    | startElem <= nextElem = 7 * (fst nextElem - fst startElem)
-    | otherwise = 7 * (iterations + fst nextElem - fst startElem)
-  dayOffset = fromEnum (snd nextElem) - fromEnum (snd startElem)
+    | startIndex <= nextIndex = 7 * (nextIndex - startIndex)
+    | otherwise = 7 * (iterations + nextIndex - startIndex)
+  dayOffset = fromEnum nextWeekday - fromEnum startWeekday
+
+prevWeekDay :: Day -> Int -> (Int, Weekday) -> (Int, Weekday) -> Day
+prevWeekDay startDay iterations (startIndex, startWeekday) (prevIndex, prevWeekday) =
+  addDays (-(fromIntegral $ weekOffset + dayOffset)) startDay
+ where
+  weekOffset
+    | startIndex >= prevIndex = 7 * (startIndex - prevIndex)
+    | otherwise = 7 * (iterations + startIndex - prevIndex)
+  dayOffset = fromEnum startWeekday - fromEnum prevWeekday
 
 nextMonthDay :: Day -> Int -> (Int, DayOfMonth) -> (Int, DayOfMonth) -> Day
 nextMonthDay startDay iterations startElem nextElem =
@@ -91,6 +102,17 @@ nextMonthDay startDay iterations startElem nextElem =
   newDay = unDayOfMonth $ snd nextElem
   (newYear, newMonth, _) =
     toGregorian $ addGregorianMonthsClip (fromIntegral monthOffset) startDay
+
+prevMonthDay :: Day -> Int -> (Int, DayOfMonth) -> (Int, DayOfMonth) -> Day
+prevMonthDay startDay iterations (startIndex, _) (prevIndex, prevDayOfMonth) =
+  fromGregorian newYear newMonth newDay
+ where
+  monthOffset
+    | startIndex >= prevIndex = startIndex - prevIndex
+    | otherwise = iterations + startIndex - prevIndex
+  newDay = unDayOfMonth prevDayOfMonth
+  (newYear, newMonth, _) =
+    toGregorian $ addGregorianMonthsClip (fromIntegral (-monthOffset)) startDay
 
 -------------------------------------------------------------------------------
 
@@ -150,11 +172,27 @@ nextPosition f (PatternState pat@Pattern{..} (PatternPosition{..})) =
   nextIndex = if index == size elems - 1 then 0 else index + 1
   nextDay = f day iterations (elemAt index elems) (elemAt nextIndex elems)
 
+prevPosition ::
+  (Day -> Int -> (Int, a) -> (Int, a) -> Day) ->
+  PatternState a ->
+  PatternState a
+prevPosition f (PatternState pat@Pattern{..} (PatternPosition{..})) =
+  PatternState pat $ PatternPosition prevDay prevIndex
+ where
+  prevIndex = if index == 0 then size elems - 1 else index - 1
+  prevDay = f day iterations (elemAt index elems) (elemAt prevIndex elems)
+
 nextPositionWeekly :: WeeklyPatternState -> WeeklyPatternState
 nextPositionWeekly = nextPosition nextWeekDay
 
 nextPositionMonthly :: MonthlyPatternState -> MonthlyPatternState
 nextPositionMonthly = nextPosition nextMonthDay
+
+prevPositionWeekly :: WeeklyPatternState -> WeeklyPatternState
+prevPositionWeekly = prevPosition prevWeekDay
+
+prevPositionMonthly :: MonthlyPatternState -> MonthlyPatternState
+prevPositionMonthly = prevPosition prevMonthDay
 
 nextDays ::
   (PatternState a -> PatternState a) ->
@@ -167,6 +205,12 @@ futureStatesWeekly = nextDays nextPositionWeekly
 
 futureStatesMonthly :: MonthlyPatternState -> [MonthlyPatternState]
 futureStatesMonthly = nextDays nextPositionMonthly
+
+pastStatesWeekly :: WeeklyPatternState -> [WeeklyPatternState]
+pastStatesWeekly = nextDays prevPositionWeekly
+
+pastStatesMonthly :: MonthlyPatternState -> [MonthlyPatternState]
+pastStatesMonthly = nextDays prevPositionMonthly
 
 nextEligibleDay ::
   Eq a =>

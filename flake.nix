@@ -73,6 +73,7 @@
                   supportedGhcVersions = [ ghcVersion ];
                 })
                 haskell.packages.ghc924.fourmolu_0_8_2_0
+                postgresql
               ];
 
             };

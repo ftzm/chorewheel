@@ -42,6 +42,10 @@ import Control.Monad.Catch
 -------------------------------------------------------------------------------
 -- Test utils
 
+
+getPatternPosition :: PatternState a -> PatternPosition
+getPatternPosition (PatternState _ p) = p
+
 -- Stolen from HUnit-Plus, which would not compile.
 -- | Assert that the given computation throws an exception that
 -- matches a predicate.
@@ -207,7 +211,7 @@ unitTests runS pool = testGroup "Query Tests"
       Session.statement (householdId, userId2) insertHouseholdMember
 
       result <- Session.statement householdId getHouseholdMembers
-      liftIO $ result @?= (HouseholdMembers $ NESet.fromList $ fromList [user1, user2])
+      liftIO $ result @?= HouseholdMembers (NESet.fromList $ fromList [user1, user2])
 
       liftIO assertCompletes
   -- Chore
@@ -244,9 +248,9 @@ unitTests runS pool = testGroup "Query Tests"
       let user1 = User userId1 "test1" "test1"
       let user2 = User userId2 "test2" "test2"
       let user3 = User userId3 "test3" "test3"
-      Session.statement (user1) insertUser
-      Session.statement (user2) insertUser
-      Session.statement (user3) insertUser
+      Session.statement user1 insertUser
+      Session.statement user2 insertUser
+      Session.statement user3 insertUser
 
       userId <- UserId <$> liftIO nextRandom
       Session.statement (User userId "test" "test") insertUser
@@ -365,8 +369,8 @@ unitTests runS pool = testGroup "Query Tests"
       userId <- UserId <$> liftIO nextRandom
       let flexScheduleState = FlexDaysSS $ FlexDaysState (FlexDays 2) today
       let flexChore = Chore choreId "flex" flexScheduleState Nothing Everyone
-      let resolved1 = (length . fst) <$> (doChore flexChore $ Resolution (addDays 10 today) $ Completed userId)
-      let resolved2 = (length . fst) <$> (doChore flexChore $ Resolution today $ Completed userId)
+      let resolved1 = length . fst <$> (doChore flexChore $ Resolution (addDays 10 today) $ Completed userId)
+      let resolved2 = length . fst <$> (doChore flexChore $ Resolution today $ Completed userId)
       resolved1 @?= Right 6
       resolved2 @?= Right 1
 
@@ -532,6 +536,27 @@ unitTests runS pool = testGroup "Query Tests"
       (take 3 resultSome) @?= [user4, user3, user2]
       (take 2 $ drop 2 $ resultEveryone) @?= [user3, user2]
       resultNone @?= []
+  , testCase "generating weekly states forwards and backwards yields same results" $ do
+      today <- utctDay <$> liftIO getCurrentTime
+      let patternDays = [(1, Mon), (1, Wed), (1, Fri), (2, Tue), (2, Thu)]
+      let weeklyPattern = Pattern (NESet.fromList $ fromList patternDays) 2
+      let weeklyPatternState = fromRight $ nextEligibleDayWeekly weeklyPattern 0 today
+      let forward10 = weeklyPatternState :| take 9 (futureStatesWeekly weeklyPatternState)
+      let reverse10 = last forward10 :| take 9 (pastStatesWeekly $ last forward10)
+      map getPatternPosition (toList forward10) @?= map getPatternPosition (reverse (toList reverse10))
+  , testCase "generating monthly states forwards and backwards yields same results" $ do
+      today <- utctDay <$> liftIO getCurrentTime
+      let patternDays = [ (1, DayOfMonth 1)
+                        , (1, DayOfMonth 15)
+                        , (1, DayOfMonth 30)
+                        , (2, DayOfMonth 10)
+                        , (2, DayOfMonth 20)
+                        ]
+      let monthlyPattern = Pattern (NESet.fromList $ fromList patternDays) 2
+      let monthlyPatternState = fromRight $ nextEligibleDayMonthly monthlyPattern 0 today
+      let forward10 = monthlyPatternState :| take 9 (futureStatesMonthly monthlyPatternState)
+      let reverse10 = last forward10 :| take 9 (pastStatesMonthly $ last forward10)
+      map getPatternPosition (toList forward10) @?= map getPatternPosition (reverse (toList reverse10))
   ]
 
 -- patternTests :: TestTree
