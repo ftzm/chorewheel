@@ -2,19 +2,19 @@
 
 module Effect.Auth.Jwt where
 
-import Servant.Auth.Server (JWTSettings, makeJWT)
-import Data.Time.Clock
-import qualified Data.ByteString.Lazy as BL
-import qualified Hasql.Session as HS
 import Crypto.Random.Types (getRandomBytes)
 import Data.ByteString.Base64 (encode)
-import Data.Traversable
+import Data.ByteString.Lazy qualified as BL
 import Data.Generics.Product.Typed
+import Data.Time.Clock
+import Data.Traversable
+import Hasql.Session qualified as HS
+import Servant.Auth.Server (JWTSettings, makeJWT)
 
-import Models
 import DB
 import DB.RefreshToken
 import Effect.Auth.Password
+import Models
 
 -------------------------------------------------------------------------------
 -- JWT
@@ -39,10 +39,10 @@ updateToken i = do
   HS.statement (i, decodeUtf8 $ unRefreshToken t, expiry) upsertToken
   pure t
 
-redeemRefreshTokenImpl
-  :: WithDb r m
-  => ByteString
-  -> m (Maybe (RefreshToken, UserId))
+redeemRefreshTokenImpl ::
+  WithDb r m =>
+  ByteString ->
+  m (Maybe (RefreshToken, UserId))
 redeemRefreshTokenImpl token = do
   now <- liftIO getCurrentTime
   runPool $ do
@@ -96,7 +96,7 @@ instance (WithDb r m, WithJwtCfg r m) => AuthM (AuthT m) where
   loginForTokens = loginForTokensImpl
   refreshTokens = refreshTokensImpl
 
-newtype AuthTestT m a = AuthTestT { unAuthTest :: m a }
+newtype AuthTestT m a = AuthTestT {unAuthTest :: m a}
   deriving newtype (Functor, Applicative, Monad)
 
 instance (Monad m, Applicative m) => AuthM (AuthTestT m) where

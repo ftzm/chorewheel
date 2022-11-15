@@ -1,26 +1,26 @@
 {-# LANGUAGE UndecidableInstances #-}
 
-module Log
-  ( Katip()
-  , KatipContext()
-  , LogM
-  , logError
-  , logWarn
-  , logInfo
-  , logResource
-  , logRequests
-  , logIO
-  , logInfoIO
-  ) where
+module Log (
+  Katip (),
+  KatipContext (),
+  LogM,
+  logError,
+  logWarn,
+  logInfo,
+  logResource,
+  logRequests,
+  logIO,
+  logInfoIO,
+) where
 
-import Data.Generics.Product.Typed
-import Data.Generics.Internal.VL.Lens
 import Control.Monad.Trans.Resource
+import Data.Generics.Internal.VL.Lens
+import Data.Generics.Product.Typed
 import Katip
 
-import Network.Wai
-import Network.HTTP.Types.Status
 import Data.Aeson
+import Network.HTTP.Types.Status
+import Network.Wai
 
 --------------------------------------------------------------------------------
 -- Generic Lens Katip Instances
@@ -29,17 +29,22 @@ instance
   ( MonadReader r m
   , HasType LogEnv r
   , MonadIO m
-  ) => Katip m where
+  ) =>
+  Katip m
+  where
   getLogEnv = asks $ getTyped @LogEnv
   localLogEnv f = local (over (typed @LogEnv) f)
 
-instance {-# OVERLAPPABLE #-}
+instance
+  {-# OVERLAPPABLE #-}
   ( MonadReader r m
   , HasType LogEnv r
   , HasType LogContexts r
   , HasType Namespace r
   , MonadIO m
-  ) => KatipContext m where
+  ) =>
+  KatipContext m
+  where
   getKatipContext = asks $ getTyped @LogContexts
   localKatipContext f = local (over (typed @LogContexts) f)
   getKatipNamespace = asks $ getTyped @Namespace
@@ -67,20 +72,26 @@ logInfo = withFrozenCallStack $ logLocM InfoS . showLS
 
 --------------------------------------------------------------------------------
 
-logResource
-  :: MonadResource m
-  => Text
-  -> Text
-  -> m (LogEnv, LogContexts, Namespace)
+logResource ::
+  MonadResource m =>
+  Text ->
+  Text ->
+  m (LogEnv, LogContexts, Namespace)
 logResource appName appEnv = snd <$> allocate create close
-  where
-    create = do
-      handleScribe <- mkHandleScribeWithFormatter
-        jsonFormat ColorIfTerminal stdout (permitItem InfoS) V2
-      logEnv <- registerScribe "stdout" handleScribe defaultScribeSettings
+ where
+  create = do
+    handleScribe <-
+      mkHandleScribeWithFormatter
+        jsonFormat
+        ColorIfTerminal
+        stdout
+        (permitItem InfoS)
+        V2
+    logEnv <-
+      registerScribe "stdout" handleScribe defaultScribeSettings
         =<< initLogEnv (Namespace [appName]) (Environment appEnv)
-      return (logEnv, mempty, "main")
-    close (logEnv, _, _) = void $ closeScribes logEnv
+    return (logEnv, mempty, "main")
+  close (logEnv, _, _) = void $ closeScribes logEnv
 
 --------------------------------------------------------------------------------
 -- Request logging middleware
@@ -90,17 +101,19 @@ data RequestLog = RequestLog
   , path :: Text
   , query :: Text
   , responseCode :: Int
-  } deriving (Show, Generic)
+  }
+  deriving (Show, Generic)
 
 instance ToJSON RequestLog
 
 toRequestLog :: Request -> Response -> RequestLog
-toRequestLog req res = RequestLog
-  { method = decodeUtf8 $ requestMethod req
-  , path = decodeUtf8 $ rawPathInfo req
-  , query = decodeUtf8 $ rawQueryString req
-  , responseCode = statusCode $ responseStatus res
-  }
+toRequestLog req res =
+  RequestLog
+    { method = decodeUtf8 $ requestMethod req
+    , path = decodeUtf8 $ rawPathInfo req
+    , query = decodeUtf8 $ rawQueryString req
+    , responseCode = statusCode $ responseStatus res
+    }
 
 logIO :: LogEnv -> Namespace -> Text -> IO ()
 logIO logEnv namespace msg =
@@ -114,7 +127,7 @@ logRequests :: LogEnv -> Namespace -> Application -> Application
 logRequests logEnv namespace baseApp =
   \req responseFunc ->
     baseApp req $ \res -> logReq req res >> responseFunc res
-  where
-    logReq req res =
-      runKatipContextT logEnv (sl "request" $ toRequestLog req res) namespace
-      $ logFM InfoS "request"
+ where
+  logReq req res =
+    runKatipContextT logEnv (sl "request" $ toRequestLog req res) namespace $
+      logFM InfoS "request"

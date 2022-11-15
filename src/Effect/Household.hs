@@ -2,9 +2,9 @@
 
 module Effect.Household where
 
-import qualified Hasql.Session as HS
-import qualified Data.Vector as V
 import Data.UUID.V4
+import Data.Vector qualified as V
+import Hasql.Session qualified as HS
 
 import DB
 import DB.Household

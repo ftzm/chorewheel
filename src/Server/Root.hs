@@ -7,12 +7,11 @@ import Data.Map.Merge.Strict qualified as MM
 import Data.Text qualified as T
 import Data.Time.Calendar (Day, addDays)
 import Data.UUID
+import Data.Vector qualified as V
 import Lucid
 import Servant.Server
 import Servant.Server.Generic
 import Servant.Server.StaticFiles
-import qualified Data.Vector as V
-
 
 import Models
 
@@ -182,8 +181,9 @@ toChore payload id' day =
         fromRight (error $ "invalid schedule: " <> show payload) $
           MonthlyPatternS <$> createPattern mkDayOfMonth days interval
       _ -> error $ "invalid schedule: " <> show payload
-  scheduleState = fromRight (error "Invalid pattern state") $
-    nextEligibleDay day schedule
+  scheduleState =
+    fromRight (error "Invalid pattern state") $
+      nextEligibleDay day schedule
 
 createChoreHandler :: (Monad m, TimeM m, IdentifierM m, ChoreM m) => UserId -> HouseholdId -> CreateChorePayload -> m (Html ())
 createChoreHandler userId householdId payload = do
@@ -231,8 +231,7 @@ handleHousehold userId householdName = do
             getCell d =
               (ResolutionCell <$> find ((d ==) . (.day)) choreResolutions)
                 <|> lookup d (zip stateDays rotation)
-        in
-            ( c
+         in ( c
             , map getCell pastDays
             , getCell today
             , map getCell futureDays
@@ -248,8 +247,9 @@ getChoreRotation ::
   m [User]
 getChoreRotation userId household chore = do
   today <- utctDay <$> now
-  rs <- toList <$>
-    choreEvents userId household.id' chore.id' (addDays (-365) today) today
+  rs <-
+    toList
+      <$> choreEvents userId household.id' chore.id' (addDays (-365) today) today
   pure $ genRotation rs household.members chore.participants
 
 handleDoChore ::
@@ -298,7 +298,7 @@ buildGridRowInput from until today pastDays futureDays chore rotation resolution
       getCell d =
         let resolutionCell = ResolutionCell <$> find ((d ==) . (.day)) resolutions
             rotationCell = ScheduledCell <$> lookup d (zip stateDays rotation)
-        in resolutionCell <|> rotationCell
+         in resolutionCell <|> rotationCell
    in ( chore
       , map getCell pastDays
       , getCell today

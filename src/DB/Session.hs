@@ -1,18 +1,19 @@
-{-# LANGUAGE QuasiQuotes          #-}
+{-# LANGUAGE QuasiQuotes #-}
 
 module DB.Session where
 
-import Hasql.Statement (Statement(..))
-import Hasql.TH
 import Data.Profunctor
 import Data.Time.Clock
+import Hasql.Statement (Statement (..))
+import Hasql.TH
 
 import Models
 
 upsertToken :: Statement (UserId, SessionToken, UTCTime) ()
 upsertToken =
-  lmap (\(UserId i, SessionToken t, e) -> (i, t, e))
-  [resultlessStatement|
+  lmap
+    (\(UserId i, SessionToken t, e) -> (i, t, e))
+    [resultlessStatement|
     insert into session_token (user_id, token_string, expiry)
     values ($1 :: uuid, $2 :: text, $3 :: timestamptz)
     on conflict (user_id) do update
@@ -20,8 +21,10 @@ upsertToken =
 
 extendToken :: Statement (SessionToken, UTCTime) (Maybe UserId)
 extendToken =
-  dimap (\(SessionToken t, e) -> (t,e)) (fmap UserId)
-  [maybeStatement|
+  dimap
+    (\(SessionToken t, e) -> (t, e))
+    (fmap UserId)
+    [maybeStatement|
     UPDATE session_token
     SET expiry = ($2 :: timestamptz)
     WHERE token_string = ($1 :: text)
@@ -30,5 +33,6 @@ extendToken =
 
 deleteToken :: Statement UserId ()
 deleteToken =
-  lmap unUserId
-  [resultlessStatement| delete from session_token where user_id = $1 :: uuid|]
+  lmap
+    unUserId
+    [resultlessStatement| delete from session_token where user_id = $1 :: uuid|]

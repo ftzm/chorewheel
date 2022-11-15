@@ -9,13 +9,13 @@ import Data.UUID (UUID)
 import Data.Vector qualified as V
 import Hasql.Statement (Statement (..))
 import Hasql.TH
-import Models
-  ( Household (..),
-    HouseholdId (..),
-    HouseholdMembers (..),
-    User (..),
-    UserId (..),
-  )
+import Models (
+  Household (..),
+  HouseholdId (..),
+  HouseholdMembers (..),
+  User (..),
+  UserId (..),
+ )
 
 insertHousehold :: Statement (HouseholdId, Text) ()
 insertHousehold =
@@ -57,17 +57,17 @@ getUserHouseholds =
   group by h.id, h.name) as households
   where ($1 :: uuid) = any (households.user_ids)
   |]
-  where
-    decoder ::
-      V.Vector (UUID, Text, V.Vector UUID, V.Vector Text, V.Vector Text) ->
-      V.Vector Household
-    decoder = V.map $ \(i, name, userIds, names, emails) ->
-      let members = loadMembers $ V.zip3 userIds names emails
-       in Household (HouseholdId i) name members
-    loadMembers =
-      HouseholdMembers
-        . loadNESetUnsafeV
-        . V.map (\(i, n, e) -> User (UserId i) n e)
+ where
+  decoder ::
+    V.Vector (UUID, Text, V.Vector UUID, V.Vector Text, V.Vector Text) ->
+    V.Vector Household
+  decoder = V.map $ \(i, name, userIds, names, emails) ->
+    let members = loadMembers $ V.zip3 userIds names emails
+     in Household (HouseholdId i) name members
+  loadMembers =
+    HouseholdMembers
+      . loadNESetUnsafeV
+      . V.map (\(i, n, e) -> User (UserId i) n e)
 
 isHouseholdMember :: Statement (UserId, HouseholdId) Bool
 isHouseholdMember =
@@ -122,11 +122,11 @@ getHouseholdMembers =
   from household_member hm
   join "user" u on hm.user_id = u.id
   where hm.household_id = $1 :: uuid|]
-  where
-    loadMembers =
-      HouseholdMembers
-        . loadNESetUnsafeV
-        . V.map (\(i, n, e) -> User (UserId i) n e)
+ where
+  loadMembers =
+    HouseholdMembers
+      . loadNESetUnsafeV
+      . V.map (\(i, n, e) -> User (UserId i) n e)
 
 getHouseholdByName :: Statement (UserId, Text) (Maybe Household)
 getHouseholdByName =
@@ -154,17 +154,17 @@ getHouseholdByName =
   and households.name = $2 :: text
   limit 1
   |]
-  where
-    decoder ::
-      (UUID, Text, V.Vector UUID, V.Vector Text, V.Vector Text) ->
-      Household
-    decoder (i, name, userIds, names, emails) =
-      let members = loadMembers $ V.zip3 userIds names emails
-       in Household (HouseholdId i) name members
-    loadMembers =
-      HouseholdMembers
-        . loadNESetUnsafeV
-        . V.map (\(i, n, e) -> User (UserId i) n e)
+ where
+  decoder ::
+    (UUID, Text, V.Vector UUID, V.Vector Text, V.Vector Text) ->
+    Household
+  decoder (i, name, userIds, names, emails) =
+    let members = loadMembers $ V.zip3 userIds names emails
+     in Household (HouseholdId i) name members
+  loadMembers =
+    HouseholdMembers
+      . loadNESetUnsafeV
+      . V.map (\(i, n, e) -> User (UserId i) n e)
 
 getHouseholdById :: Statement (UserId, HouseholdId) (Maybe Household)
 getHouseholdById =
@@ -192,14 +192,14 @@ getHouseholdById =
   and households.id = $2 :: uuid
   limit 1
   |]
-  where
-    decoder ::
-      (UUID, Text, V.Vector UUID, V.Vector Text, V.Vector Text) ->
-      Household
-    decoder (i, name, userIds, names, emails) =
-      let members = loadMembers $ V.zip3 userIds names emails
-       in Household (HouseholdId i) name members
-    loadMembers =
-      HouseholdMembers
-        . loadNESetUnsafeV
-        . V.map (\(i, n, e) -> User (UserId i) n e)
+ where
+  decoder ::
+    (UUID, Text, V.Vector UUID, V.Vector Text, V.Vector Text) ->
+    Household
+  decoder (i, name, userIds, names, emails) =
+    let members = loadMembers $ V.zip3 userIds names emails
+     in Household (HouseholdId i) name members
+  loadMembers =
+    HouseholdMembers
+      . loadNESetUnsafeV
+      . V.map (\(i, n, e) -> User (UserId i) n e)

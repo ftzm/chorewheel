@@ -1,9 +1,9 @@
 module DB.SessionException where
 
+import Control.Monad.Catch
+import Control.Monad.Error.Class
 import Hasql.Connection hiding (acquire, release)
 import Hasql.Session
-import Control.Monad.Error.Class
-import Control.Monad.Catch
 
 -- from https://github.com/nikita-volkov/hasql/issues/144
 
@@ -28,14 +28,17 @@ instance MonadCatch Session where
     wrapSession $ catch (unwrapSession action) (unwrapSession . handler)
 
 instance MonadMask Session where
-  mask f = wrapSession $ mask
-    $ \u -> unwrapSession $ f (wrapSession . u . unwrapSession)
+  mask f = wrapSession $
+    mask $
+      \u -> unwrapSession $ f (wrapSession . u . unwrapSession)
 
-  uninterruptibleMask f = wrapSession $ uninterruptibleMask
-    $ \u -> unwrapSession $ f (wrapSession . u . unwrapSession)
+  uninterruptibleMask f = wrapSession $
+    uninterruptibleMask $
+      \u -> unwrapSession $ f (wrapSession . u . unwrapSession)
 
   generalBracket acquire release use =
-    wrapSession $ generalBracket
-                   (unwrapSession acquire)
-                   ((unwrapSession .) . release)
-                   (unwrapSession . use)
+    wrapSession $
+      generalBracket
+        (unwrapSession acquire)
+        ((unwrapSession .) . release)
+        (unwrapSession . use)

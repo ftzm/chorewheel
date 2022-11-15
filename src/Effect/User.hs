@@ -2,7 +2,7 @@
 
 module Effect.User where
 
-import qualified Hasql.Session as HS
+import Hasql.Session qualified as HS
 
 import DB
 import DB.User
