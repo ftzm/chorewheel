@@ -51,6 +51,16 @@ gridButton householdId choreId day completed =
   where
     symbol = if completed then "(x)" else "( )"
 
+undoButton :: HouseholdId -> ChoreId -> Day -> Html ()
+undoButton householdId choreId day =
+  button_
+    [ class_ $ mconcat  [ "ml-2" ]
+    , hxPost_ $ show $ _undoChore rootLinks householdId choreId day
+    , hxTarget_ $ "#chore-" <> show (unChoreId choreId)
+    , hxSwap_ "outerHTML"
+    ]
+    "undo"
+
 gridCell :: Text -> HouseholdId -> ChoreId -> Day -> Maybe CellType -> Html ()
 gridCell bg householdId choreId day c = case c of
   Nothing ->
@@ -58,8 +68,9 @@ gridCell bg householdId choreId day c = case c of
     . toHtml @Text $ ""
   Just c' -> case c' of
     ResolutionCell _ ->
-      td_ [class_ $ "p-2 border border-slate-300 text-center " <> bg]
-      . toHtml @Text $ "resolved"
+      td_ [class_ $ "p-2 border border-slate-300 text-center " <> bg] $ do
+        toHtml @Text $ "resolved"
+        undoButton householdId choreId day
     ScheduledCell u ->
       td_ [class_ $ "p-2 border border-slate-300 text-center " <> bg] $ do
         toHtml @Text $ (.name) u

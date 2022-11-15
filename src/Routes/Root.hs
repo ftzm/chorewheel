@@ -117,6 +117,14 @@ data ChoreWheelApi mode = ChoreWheelApi
           :> Capture "choreId" ChoreId
           :> QueryParam' '[Required, Strict] "date" Day
           :> Post '[HTML] (Html ())
+  , _undoChore ::
+      mode
+        :- AuthProtect "session-auth"
+          :> "undo_chore"
+          :> Capture "householdId" HouseholdId
+          :> Capture "choreId" ChoreId
+          :> QueryParam' '[Required, Strict] "date" Day
+          :> Post '[HTML] (Html ())
   , _landing ::
       mode
         :- Get '[HTML] (Html ())
