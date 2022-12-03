@@ -35,81 +35,81 @@ data CreateChorePayload = CreateChorePayload
 instance FromForm CreateChorePayload
 
 data ChoreWheelApi mode = ChoreWheelApi
-  { _ping ::
+  { ping ::
       mode
         :- "ping"
           :> Get '[PlainText] String
-  , _session ::
+  , session ::
       mode
         :- "session"
           :> NamedRoutes SessionAuth
-  , _login ::
+  , login ::
       mode
         :- "login"
           :> Header "Cookie" Text
           :> Get '[HTML] (Html ())
-  , _home ::
+  , home ::
       mode
         :- "home"
           :> AuthProtect "session-auth"
           :> Get '[HTML] (Html ())
-  , _households ::
+  , households ::
       mode
         :- "households"
           :> AuthProtect "session-auth"
           :> Get '[HTML] (Html ())
-  , _householdCreate ::
+  , householdCreate ::
       mode
         :- "household-create"
           :> AuthProtect "session-auth"
           :> ReqBody '[FormUrlEncoded] CreateHouseholdPayload
           :> Post '[HTML] (Html ())
-  , _householdLeave ::
+  , householdLeave ::
       mode
         :- "household-leave"
           :> AuthProtect "session-auth"
           :> Capture "householdId" UUID
           :> Post '[HTML] (Html ())
-  , _householdChores ::
+  , householdChores ::
       mode
         :- AuthProtect "session-auth"
           :> "household"
           :> Capture "householdName" Text
           :> "chores"
           :> Get '[HTML] (Html ())
-  , _scheduleForm ::
+  , scheduleForm ::
       mode
         :- "schedule_form"
           :> QueryParam' '[Required, Strict] "scheduleType" Text
           :> Get '[HTML] (Html ())
-  , _addWeekRow ::
+  , addWeekRow ::
       mode
         :- "add_week_row"
           :> Capture "row_id" Int
           :> Get '[HTML] (Html ())
-  , _removeWeekRow ::
+  , removeWeekRow ::
       mode
         :- "remove_week_row"
           :> Capture "row_id" Int
           :> Get '[HTML] (Html ())
-  , _addMonthRow ::
+  , addMonthRow ::
       mode
         :- "add_month_row"
           :> Capture "row_id" Int
           :> Get '[HTML] (Html ())
-  , _removeMonthRow ::
+  , removeMonthRow ::
       mode
         :- "remove_month_row"
           :> Capture "row_id" Int
           :> Get '[HTML] (Html ())
-  , _createChore ::
+  , createChore ::
       mode
         :- AuthProtect "session-auth"
           :> "create_chore"
           :> Capture "householdId" HouseholdId
           :> ReqBody '[FormUrlEncoded] CreateChorePayload
           :> Post '[HTML] (Html ())
-  , _doChore ::
+  , doChore ::
       mode
         :- AuthProtect "session-auth"
           :> "do_chore"
@@ -117,7 +117,7 @@ data ChoreWheelApi mode = ChoreWheelApi
           :> Capture "choreId" ChoreId
           :> QueryParam' '[Required, Strict] "date" Day
           :> Post '[HTML] (Html ())
-  , _undoChore ::
+  , undoChore ::
       mode
         :- AuthProtect "session-auth"
           :> "undo_chore"
@@ -125,16 +125,16 @@ data ChoreWheelApi mode = ChoreWheelApi
           :> Capture "choreId" ChoreId
           :> QueryParam' '[Required, Strict] "date" Day
           :> Post '[HTML] (Html ())
-  , _landing ::
+  , landing ::
       mode
         :- Get '[HTML] (Html ())
-  , _household ::
+  , household ::
       mode
         :- AuthProtect "session-auth"
           :> "household"
           :> Capture "householdName" Text
           :> Get '[HTML] (Html ())
-  , _static ::
+  , static ::
       mode
         :- "static"
           :> Raw

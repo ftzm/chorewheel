@@ -9,20 +9,20 @@ import Web.FormUrlEncoded (FromForm)
 import ApiUtil
 
 data LoginForm = LoginForm
-  { _username :: Text
-  , _password :: Text
+  { username :: Text
+  , password :: Text
   }
   deriving (Generic)
 
 instance FromForm LoginForm
 
 data SessionAuth mode = SessionAuth
-  { _sessionLogin ::
+  { sessionLogin ::
       mode
         :- "login"
           :> ReqBody '[FormUrlEncoded] LoginForm
           :> Post303 '[PlainText] '[Header "Set-Cookie" SetCookie] NoContent
-  , _sessionLogout ::
+  , sessionLogout ::
       mode
         :- "logout"
           :> Get303 '[PlainText] '[Header "Set-Cookie" SetCookie] NoContent

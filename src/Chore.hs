@@ -1,5 +1,4 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE OverloadedLabels #-}
 
 module Chore where
@@ -13,7 +12,7 @@ import Data.Set qualified as Set
 import Data.Set.NonEmpty qualified as NESet
 import Data.Time.Clock
 import Data.UUID
-import Debug.Trace
+--import Debug.Trace
 import GHC.Records (HasField)
 import Servant.API
 
@@ -33,7 +32,7 @@ newtype ChoreId = ChoreId {unChoreId :: UUID}
   deriving newtype (ToHttpApiData, FromHttpApiData)
 
 data Chore = Chore
-  { id' :: ChoreId
+  { id :: ChoreId
   , name :: Text
   , schedule :: ScheduleState
   , lastResolution :: Maybe Resolution
@@ -68,8 +67,8 @@ doChore ::
   Chore ->
   Resolution ->
   Either ResolutionError ([Resolution], Chore)
-doChore c@Chore{..} resolution =
-  resolveSchedule schedule ((.day) <$> lastResolution) resolution
+doChore c resolution =
+  resolveSchedule c.schedule ((.day) <$> c.lastResolution) resolution
     <&> \(resolutions, nextScheduleState) ->
       ( resolutions
       , c
@@ -77,20 +76,22 @@ doChore c@Chore{..} resolution =
           & #lastResolution .~ (Just resolution)
       )
 
-enrichById :: (Foldable t, Eq b, HasField "id'" a b) => t a -> [b] -> [a]
-enrichById s = catMaybes . map (\i -> find ((i ==) . (.id')) s)
+enrichById :: (Foldable t, Eq b, HasField "id" a b) => t a -> [b] -> [a]
+enrichById s = mapMaybe (\i -> find ((i ==) . (.id)) s)
 
 genRotation :: [Resolution] -> HouseholdMembers -> Participants -> [User]
 genRotation resolutions (HouseholdMembers hm) participants =
-  cycle $ enrichById hm $ Debug.Trace.trace (show order) order
+  --cycle $ enrichById hm $ Debug.Trace.trace (show order) order
+  cycle $ enrichById hm order
  where
   sortedResolutions = sortBy (\x y -> compare x.day y.day) resolutions
   participantSet = case participants of
     Some ps -> NESet.toSet ps
-    Everyone -> Set.map (.id') $ NESet.toSet hm
+    Everyone -> Set.map (.id) $ NESet.toSet hm
     None -> mempty
   completions =
     ordNub
       [ u | Completed u <- map resolutionType sortedResolutions, Set.member u participantSet
       ]
-  order = Debug.Trace.trace (show completions) (toList participantSet \\ completions) ++ completions
+  --order = Debug.Trace.trace (show completions) (toList participantSet \\ completions) ++ completions
+  order = (toList participantSet \\ completions) ++ completions

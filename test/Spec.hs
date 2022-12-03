@@ -296,7 +296,7 @@ unitTests runS pool =
         output4 <- Session.statement choreId4 getSchedule
 
         allOutput <- Session.statement householdId getFullChoresByHousehold
-        liftIO $ print allOutput
+        --liftIO $ print allOutput
         liftIO $ V.length allOutput @?= 4
 
         Session.statement choreId1 deleteSchedule
@@ -420,7 +420,7 @@ unitTests runS pool =
         let monthlyPattern = Pattern (NESet.fromList $ fromList patternDays) 2
         let startingPatternState = fromRight $ nextEligibleDayMonthly monthlyPattern 0 today
         let startingScheduledDay = (\(PatternState _ pos) -> pos.day) startingPatternState
-        let dayToComplete = addDays 60 startingScheduledDay
+        let dayToComplete = addDays 56 startingScheduledDay
         let weeklyPatternState = MonthlyPatternSS startingPatternState
         let chore = Chore choreId "weekly" weeklyPatternState Nothing Everyone
         let output1 = (length . fst) <$> (doChore chore $ Resolution dayToComplete $ Completed userId)
@@ -437,7 +437,7 @@ unitTests runS pool =
         Session.statement (householdId, "home") insertHousehold
         Session.statement (householdId, choreId, "sweep") insertChore
         let resolutions = V.fromList $ map ((choreId,) . flip Resolution (Completed userId) . flip addDays today) [0 .. 5]
-        Session.statement resolutions insertChoreEvents
+        Session.statement resolutions insertChoreEventsQ
         output <- Session.statement choreId getChoreEvents
         liftIO $ output @?= V.map snd resolutions
     , testCase "getChoreEventsFromTo" $ runS $ do
@@ -451,9 +451,9 @@ unitTests runS pool =
         Session.statement (householdId, "home") insertHousehold
         Session.statement (householdId, choreId, "sweep") insertChore
         let resolutions = V.fromList $ map ((choreId,) . flip Resolution (Completed userId) . flip addDays today) [0 .. 5]
-        Session.statement resolutions insertChoreEvents
+        Session.statement resolutions insertChoreEventsQ
         output <- Session.statement (choreId, addDays 2 today, until) getChoreEventsFromTo
-        liftIO $ length output @?= 5
+        liftIO $ length output @?= 4
     , testCase "getHouseholdChoreEventsFromTo" $ runS $ do
         today <- utctDay <$> liftIO getCurrentTime
         let until = addDays 10 today
@@ -470,9 +470,9 @@ unitTests runS pool =
         let chore1Resolutions = map ((choreId1,) . flip Resolution (Completed userId) . flip addDays today) [0 .. 5]
         let chore2Resolutions = map ((choreId2,) . flip Resolution (Completed userId) . flip addDays today) [0 .. 5]
         let resolutions = V.fromList $ chore1Resolutions ++ chore2Resolutions
-        Session.statement resolutions insertChoreEvents
+        Session.statement resolutions insertChoreEventsQ
         output <- Session.statement (householdId, addDays 2 today, until) getHouseholdChoreEventsFromTo
-        print output
+        --print output
         liftIO $ length (M.foldr (++) [] output) @?= 8
     , testCase "choreParticipantsRoundTrip Everyone" $ runS $ do
         -- userId <- UserId <$> liftIO nextRandom

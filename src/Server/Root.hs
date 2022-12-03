@@ -51,25 +51,25 @@ choreWheelApi ::
   ChoreWheelApi (AsServerT m)
 choreWheelApi =
   ChoreWheelApi
-    { _ping = return "pong"
-    , _session = sessionAuth
-    , _login = loginHandler
-    , _home = homeHandler
-    , _households = householdsHandler
-    , _householdCreate = householdCreateHandler
-    , _householdLeave = householdLeaveHandler
-    , _householdChores = householdChoresHandler
-    , _scheduleForm = scheduleFormHandler
-    , _addWeekRow = addWeekRowHandler
-    , _removeWeekRow = removeWeekRowHandler
-    , _addMonthRow = addMonthRowHandler
-    , _removeMonthRow = removeMonthRowHandler
-    , _createChore = createChoreHandler
-    , _doChore = handleDoChore
-    , _undoChore = handleUndoChore
-    , _landing = landingHandler
-    , _household = handleHousehold
-    , _static = serveDirectoryWebApp "static"
+    { ping = return "pong"
+    , session = sessionAuth
+    , login = loginHandler
+    , home = homeHandler
+    , households = householdsHandler
+    , householdCreate = householdCreateHandler
+    , householdLeave = householdLeaveHandler
+    , householdChores = householdChoresHandler
+    , scheduleForm = scheduleFormHandler
+    , addWeekRow = addWeekRowHandler
+    , removeWeekRow = removeWeekRowHandler
+    , addMonthRow = addMonthRowHandler
+    , removeMonthRow = removeMonthRowHandler
+    , createChore = createChoreHandler
+    , doChore = handleDoChore
+    , undoChore = handleUndoChore
+    , landing = landingHandler
+    , household = handleHousehold
+    , static = serveDirectoryWebApp "static"
     }
 
 loginHandler ::

@@ -103,7 +103,7 @@ authHandler' req =
   checkToken t =
     continue (SessionToken t)
       >>= maybe (handleError "session token invalid") return
-  handleError msg = logWarn msg >> redirect302 rootLinks._login
+  handleError msg = logWarn msg >> redirect302 rootLinks.login
 
 authHandler ::
   MonadError ServerError m =>

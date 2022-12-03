@@ -15,7 +15,7 @@ import Data.Aeson
 import Data.UUID
 
 data User = User
-  { id' :: UserId
+  { id :: UserId
   , name :: Text
   , email :: Text
   }
@@ -27,7 +27,7 @@ instance ToJWT User
 instance FromJWT User
 
 data JwtPayload = JwtPayload
-  { userId'' :: UUID
+  { userId :: UUID
   }
   deriving (Show, Eq, Generic)
 
@@ -91,7 +91,7 @@ newtype HouseholdMembers = HouseholdMembers {unHouseholdMembers :: NESet.NESet U
   deriving (Show, Eq)
 
 data Household = Household
-  { id' :: HouseholdId
+  { id :: HouseholdId
   , name :: Text
   , members :: HouseholdMembers
   }

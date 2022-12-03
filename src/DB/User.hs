@@ -12,7 +12,7 @@ import Models (User (..), UserId (..))
 insertUser :: Statement User ()
 insertUser =
   lmap
-    (\User{..} -> (unUserId id', name, email))
+    (\u -> (unUserId u.id, u.name, u.email))
     [resultlessStatement|
     insert into "user" (id, name, email)
     values ($1 :: uuid, $2 :: text, $3 :: text)|]
