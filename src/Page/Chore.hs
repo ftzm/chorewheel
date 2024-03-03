@@ -7,6 +7,7 @@ import Chore
 import Models (HouseholdId (..))
 import Page.Attribute
 import Page.Common
+import Routes.Root
 
 choresPage :: HouseholdId -> [Chore] -> Html ()
 choresPage householdId chores = container "chores " $ do
@@ -18,7 +19,7 @@ choresPage householdId chores = container "chores " $ do
   addChore householdId
 
 addChore :: HouseholdId -> Html ()
-addChore householdId = form_ [hxPost_ $ "/create_chore/" <> show (unHouseholdId householdId)] $ do
+addChore householdId = form_ [hxPost_ $ show $ rootLinks.createChore householdId] $ do
   p_ "Add a chore"
   br_ []
   myInput [placeholder_ "Chore Name", name_ "choreName", xData_ "{}"]
@@ -26,7 +27,7 @@ addChore householdId = form_ [hxPost_ $ "/create_chore/" <> show (unHouseholdId 
   br_ []
   mySelect
     [ name_ "scheduleType"
-    , hxGet_ "/schedule_form"
+    , hxGet_ $ show rootLinkFragments.scheduleForm
     , hxTarget_ "#schedule"
     ]
     [ ("unscheduled", "Unscheduled")
@@ -107,7 +108,11 @@ createWeeklyForm _ = do
   div_ [id_ "adjuster"] $ weekAdjuster 0
 
 weekAdjuster :: Int -> Html ()
-weekAdjuster = adjuster "#week" "/add_week_row/" "/remove_week_row/"
+weekAdjuster =
+  adjuster
+    "#week"
+    (show rootLinkFragments.addWeekRow)
+    (show rootLinkFragments.removeWeekRow)
 
 weekRow :: Int -> Html ()
 weekRow i =
@@ -178,7 +183,11 @@ monthRow i = div_ [id_ rowId, class_ "mb-2"] $ do
   rowId = "month-" <> show i
 
 monthAdjuster :: Int -> Html ()
-monthAdjuster = adjuster "#month" "/add_month_row/" "/remove_month_row/"
+monthAdjuster =
+  adjuster
+    "#week"
+    (show rootLinkFragments.addMonthRow)
+    (show rootLinkFragments.removeMonthRow)
 
 addMonthRow :: Int -> Html ()
 addMonthRow newRow = do

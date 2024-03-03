@@ -21,8 +21,8 @@ container title body =
     head_ $ do
       title_ $ toHtml title
       -- link_ [rel_ "stylesheet", type_ "text/css", href_ "screen.css"]
-      script_ [src_ "https://cdn.tailwindcss.com"] ("" :: Text)
-      script_ [src_ "https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js", defer_ ""] ("" :: Text)
+      --script_ [src_ "https://cdn.tailwindcss.com"] ("" :: Text)
+      --script_ [src_ "https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js", defer_ ""] ("" :: Text)
       htmxScript
       style_ "body{background:white}"
     body_ [class_ "flex"] $ do

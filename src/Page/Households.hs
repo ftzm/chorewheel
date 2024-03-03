@@ -19,7 +19,7 @@ householdsFragment households =
       li_ [class_ "m-2"] $ do
         span_ [class_ "mr-2"] $ toHtml name
         myButton
-          [ hxPost_ $ "/household-leave/" <> show id'
+          [ hxPost_ $ show $ rootLinks.householdLeave id
           , hxTarget_ "#households"
           ]
           "Leave"
@@ -32,9 +32,13 @@ householdsPage households =
     div_ [id_ "households"] $ householdsFragment households
     hr_ [class_ "mt-2 mb-2"]
     span_ "Add a new household:"
-    form_ [hxPost_ "/household-create", hxTarget_ "#households"] $ do
-      myInput [class_ "mr-2", name_ "newHouseholdName"]
-      myButton [type_ "submit"] "Submit"
+    form_
+      [ hxPost_ $ show $ rootLinkFragments.householdCreate
+      , hxTarget_ "#households"
+      ]
+      $ do
+        myInput [class_ "mr-2", name_ "newHouseholdName"]
+        myButton [type_ "submit"] "Submit"
 
 --------------------------------------------------------------------------------
 

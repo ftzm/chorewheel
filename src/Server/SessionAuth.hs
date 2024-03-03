@@ -10,6 +10,7 @@ import Web.Cookie
 import ApiUtil
 import Effect.Auth.Session as Sess
 import Models
+import Routes.Root
 import Routes.SessionAuth
 import Servant.API
 
@@ -19,11 +20,11 @@ sessionAuth ::
   SessionAuth (AsServerT m)
 sessionAuth =
   SessionAuth
-    { _sessionLogin = sessionLogin
-    , _sessionLogout = return sessionLogout
+    { sessionLogin = sessionLoginImpl
+    , sessionLogout = return sessionLogoutImpl
     }
 
-sessionLogin ::
+sessionLoginImpl ::
   MonadError ServerError m =>
   SessionAuthM m =>
   LoginForm ->
@@ -34,21 +35,21 @@ sessionLogin ::
          ]
         NoContent
     )
-sessionLogin loginForm = do
+sessionLoginImpl loginForm = do
   sessionToken <- justOrErr err401 =<< Sess.login username password
   let tokenString = encodeUtf8 $ unSessionToken sessionToken
   pure $
-    addHeader "/home" $
+    addHeader (show rootLinks.home) $
       addHeader (defCookie "session-token" tokenString) NoContent
  where
-  username = Username $ _username loginForm
-  password = Password $ encodeUtf8 $ _password loginForm
+  username = Username $ loginForm.username
+  password = Password $ encodeUtf8 $ loginForm.password
 
-sessionLogout ::
+sessionLogoutImpl ::
   Headers
     '[ Header "Location" Text
      , Header "Set-Cookie" SetCookie
      ]
     NoContent
-sessionLogout =
-  addHeader "/login" $ addHeader (removeCookie "session-token") NoContent
+sessionLogoutImpl =
+  addHeader (show $ rootLinks.login) $ addHeader (removeCookie "session-token") NoContent

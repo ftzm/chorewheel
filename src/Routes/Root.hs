@@ -1,10 +1,10 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedLabels #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Routes.Root where
 
 import Data.Time.Calendar (Day)
-import Data.UUID
 import Lucid
 import Servant.API
 import Servant.Links
@@ -68,7 +68,7 @@ data ChoreWheelApi mode = ChoreWheelApi
       mode
         :- "household-leave"
           :> AuthProtect "session-auth"
-          :> Capture "householdId" UUID
+          :> Capture "householdId" HouseholdId
           :> Post '[HTML] (Html ())
   , householdChores ::
       mode
@@ -141,5 +141,33 @@ data ChoreWheelApi mode = ChoreWheelApi
   }
   deriving (Generic)
 
+data LinkFragments mode = LinkFragments
+  { scheduleForm ::
+      mode :- "schedule_form" :> Get '[HTML] (Html ())
+  , addWeekRow ::
+      mode :- "add_week_row" :> Get '[HTML] (Html ())
+  , removeWeekRow ::
+      mode :- "remove_week_row" :> Get '[HTML] (Html ())
+  , addMonthRow ::
+      mode :- "add_week_row" :> Get '[HTML] (Html ())
+  , removeMonthRow ::
+      mode :- "remove_week_row" :> Get '[HTML] (Html ())
+  , householdCreate ::
+      mode
+        :- "household-create"
+          :> AuthProtect "session-auth"
+          :> Post '[HTML] (Html ())
+  }
+  deriving (Generic)
+
+type family TakeParam api where
+  TakeParam (a :> b) = a
+
+type family DropParam api where
+  DropParam (a :> b :> Verb w x y z) = a :> Verb w x y z
+
 rootLinks :: ChoreWheelApi (AsLink URI)
 rootLinks = allFieldLinks' (over #uriPath ("/" <>) . linkURI)
+
+rootLinkFragments :: LinkFragments (AsLink URI)
+rootLinkFragments = allFieldLinks' (over #uriPath ("/" <>) . linkURI)

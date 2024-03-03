@@ -10,6 +10,11 @@ import DB
 import DB.Household
 import Models
 
+data HouseholdMembership = HouseholdMembership
+  { userId :: UserId
+  , householdId :: HouseholdId
+  }
+
 class Monad m => HouseholdM m where
   getHouseholds :: UserId -> m [Household]
   getHousehold :: UserId -> HouseholdId -> m (Maybe Household)
@@ -17,6 +22,10 @@ class Monad m => HouseholdM m where
   leaveHousehold :: UserId -> HouseholdId -> m ()
   householdIdFromName :: UserId -> Text -> m (Maybe HouseholdId)
   householdFromName :: UserId -> Text -> m (Maybe Household)
+  getHouseholdMembership ::
+    UserId ->
+    HouseholdId ->
+    m (Maybe HouseholdMembership)
 
 newtype HouseholdT m a = HouseholdT (m a)
   deriving newtype (Functor, Applicative, Monad, MonadIO, MonadReader r)
@@ -33,3 +42,6 @@ instance (WithDb r m) => HouseholdM (HouseholdT m) where
     HS.statement h deleteEmptyHousehold
   householdIdFromName u n = runPool $ HS.statement (u, n) getHouseholdIdFromName
   householdFromName u n = runPool $ HS.statement (u, n) getHouseholdByName
+  getHouseholdMembership u h = do
+    isMember <- runPool $ HS.statement (u, h) isHouseholdMemberQ
+    return $ if isMember then Just (HouseholdMembership u h) else Nothing

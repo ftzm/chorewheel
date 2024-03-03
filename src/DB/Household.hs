@@ -69,8 +69,8 @@ getUserHouseholds =
       . loadNESetUnsafeV
       . V.map (\(i, n, e) -> User (UserId i) n e)
 
-isHouseholdMember :: Statement (UserId, HouseholdId) Bool
-isHouseholdMember =
+isHouseholdMemberQ :: Statement (UserId, HouseholdId) Bool
+isHouseholdMemberQ =
   lmap
     (bimap unUserId unHouseholdId)
     [singletonStatement|

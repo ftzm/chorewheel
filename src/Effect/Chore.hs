@@ -13,6 +13,7 @@ import DB
 import DB.Chore
 import DB.Household
 import DB.Schedule
+import Effect.Household
 import Models
 import Schedule
 
@@ -23,14 +24,20 @@ getFullChoresImpl h =
 getFullChoreImpl :: (WithDb r m) => ChoreId -> m Chore
 getFullChoreImpl h = runPool $ HS.statement h getFullChoreById
 
+saveChoreImpl' :: (WithDb r m) => HouseholdMembership -> Chore -> m ()
+saveChoreImpl' membership chore = runPool $ do
+  HS.statement (membership.householdId, chore.id, chore.name) insertChore
+  insertSchedule (chore.id, chore.schedule)
+  insertParticipants (chore.id, chore.participants)
+
 saveChoreImpl :: (WithDb r m) => UserId -> HouseholdId -> Chore -> m ()
 saveChoreImpl userId householdId chore = runPool $ do
-  isHouseholdMember' <- HS.statement (userId, householdId) isHouseholdMember
+  isHouseholdMember' <- HS.statement (userId, householdId) isHouseholdMemberQ
   if isHouseholdMember'
     then do
-      HS.statement (householdId, chore.id', chore.name) insertChore
-      insertSchedule (chore.id', chore.schedule)
-      insertParticipants (chore.id', chore.participants)
+      HS.statement (householdId, chore.id, chore.name) insertChore
+      insertSchedule (chore.id, chore.schedule)
+      insertParticipants (chore.id, chore.participants)
     else error "User is not a household member"
 
 resolveChoreImpl ::
@@ -40,8 +47,8 @@ resolveChoreImpl _ _ c r = do
     either (error . show) pure $
       resolveSchedule c.schedule ((.day) <$> c.lastResolution) r
   runPool $ do
-    HS.statement (V.fromList $ map (c.id',) rs) insertChoreEventsQ
-    updateSchedule' (c.id', ss)
+    HS.statement (V.fromList $ map (c.id,) rs) insertChoreEventsQ
+    updateSchedule' (c.id, ss)
 
 allChoreEventsImpl ::
   (WithDb r m) =>
